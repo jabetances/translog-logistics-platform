@@ -5,7 +5,8 @@ const API = 'http://localhost:3000/api';
 export type ShipmentStatus = 'CREATED' | 'IN_WAREHOUSE' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'RETURNED' | 'CANCELLED';
 export type ShipmentSortField = 'trackingCode' | 'recipientName' | 'destinationAddress' | 'status' | 'createdAt';
 export type SortDirection = 'ASC' | 'DESC';
-export interface Shipment { id: string; trackingCode: string; recipientName: string; destinationAddress: string; originAddress: string; weightKg: string; status: ShipmentStatus; createdAt: string; deliveredAt?: string; events?: Array<{status: ShipmentStatus; location: string; notes?: string; createdAt: string}>; }
+export interface Shipment { id: string; trackingCode: string; recipientName: string; destinationAddress: string; originAddress: string; weightKg: string; status: ShipmentStatus; createdAt: string; deliveredAt?: string; events?: Array<{id?: string; status: ShipmentStatus; location: string; notes?: string | null; createdAt: string}>; }
+export interface PublicTracking { trackingCode: string; status: ShipmentStatus; createdAt: string; deliveredAt: string | null; events: Array<{id: string; status: ShipmentStatus; location: string; notes: string | null; createdAt: string}>; }
 @Injectable({ providedIn: 'root' })
 export class ShipmentsService {
   constructor(private http: HttpClient) {}
@@ -13,5 +14,6 @@ export class ShipmentsService {
   create(data: {originAddress:string; destinationAddress:string; recipientName:string; contactPhone?:string; weightKg:number}) { return this.http.post<Shipment>(API + '/shipments', data); }
   detail(id: string) { return this.http.get<Shipment>(API + '/shipments/' + id); }
   changeStatus(id: string, data: {status:ShipmentStatus;location:string;notes?:string}) { return this.http.patch<Shipment>(API + '/shipments/' + id + '/status', data); }
-  track(code: string): Observable<{trackingCode:string;status:ShipmentStatus;recipientName:string;destinationAddress:string;createdAt:string;deliveredAt?:string;events:NonNullable<Shipment['events']>}> { return this.http.get<any>(API + '/tracking/' + encodeURIComponent(code)); }
+  cancel(id: string) { return this.http.delete<Shipment>(API + '/shipments/' + id); }
+  track(code: string): Observable<PublicTracking> { return this.http.get<PublicTracking>(API + '/tracking/' + encodeURIComponent(code)); }
 }
