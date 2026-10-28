@@ -13,7 +13,15 @@ input,
 select,
 textarea,
 .mdc-button,
-.mat-mdc-button-base {
+.mat-mdc-button-base,
+table,
+table *,
+.mat-mdc-table,
+.mat-mdc-table *,
+.mat-mdc-paginator,
+.mat-mdc-paginator *,
+.mat-mdc-snack-bar-container,
+.mat-mdc-snack-bar-container * {
   font-family: Inter, system-ui, sans-serif !important;
 }
 *,
