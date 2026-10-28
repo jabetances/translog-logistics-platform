@@ -1,15 +1,72 @@
 @import '@angular/material/prebuilt-themes/azure-blue.css';
-html,body{margin:0;min-height:100%;font-family:Inter,system-ui,sans-serif;}
-*{box-sizing:border-box;}
-button,input,select,textarea,.mdc-button,.mat-mdc-button-base{font-family:Inter,system-ui,sans-serif!important;}
-*,*::before,*::after{border-radius:0!important;box-shadow:none!important;text-shadow:none!important;}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Inter, system-ui, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+button,
+input,
+select,
+textarea,
+.mdc-button,
+.mat-mdc-button-base {
+  font-family: Inter, system-ui, sans-serif !important;
+}
+*,
+*::before,
+*::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
 
 /* Colores solo para distintivos del estado actual; el historial conserva texto neutro. */
-.status-badge{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:6px 10px;font-weight:700;white-space:nowrap;border:1px solid transparent}
-.badge.status-badge.status-created{background:#e8eefc;color:#304b79;border-color:#b9c8ed}
-.badge.status-badge.status-in-warehouse{background:#f0eafd;color:#56369a;border-color:#cbb9ed}
-.badge.status-badge.status-in-transit{background:#e1effe;color:#1e4f91;border-color:#a8c9f2}
-.badge.status-badge.status-out-for-delivery{background:#fff1cc;color:#7b4a08;border-color:#e8cb79}
-.badge.status-badge.status-delivered{background:#ddf4e4;color:#14532d;border-color:#83c994}
-.badge.status-badge.status-returned{background:#ffeadb;color:#8a3415;border-color:#efb994}
-.badge.status-badge.status-cancelled{background:#fde5e5;color:#8e2828;border-color:#e9aaaa}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 6px 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.badge.status-badge.status-created {
+  background: #e8eefc;
+  color: #304b79;
+  border-color: #b9c8ed;
+}
+.badge.status-badge.status-in-warehouse {
+  background: #f0eafd;
+  color: #56369a;
+  border-color: #cbb9ed;
+}
+.badge.status-badge.status-in-transit {
+  background: #e1effe;
+  color: #1e4f91;
+  border-color: #a8c9f2;
+}
+.badge.status-badge.status-out-for-delivery {
+  background: #fff1cc;
+  color: #7b4a08;
+  border-color: #e8cb79;
+}
+.badge.status-badge.status-delivered {
+  background: #ddf4e4;
+  color: #14532d;
+  border-color: #83c994;
+}
+.badge.status-badge.status-returned {
+  background: #ffeadb;
+  color: #8a3415;
+  border-color: #efb994;
+}
+.badge.status-badge.status-cancelled {
+  background: #fde5e5;
+  color: #8e2828;
+  border-color: #e9aaaa;
+}

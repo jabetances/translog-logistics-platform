@@ -1,1 +1,78 @@
-:host{display:block;min-height:100vh;background:#f5f8f8;color:#18313a;font-family:Inter,system-ui,sans-serif}header{height:72px;background:#fff;border-bottom:1px solid #e5ecee;display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1160px)/2));position:sticky;top:0;z-index:2}.brand{font-size:20px;font-weight:800;color:#18313a;text-decoration:none;display:flex;align-items:center;gap:10px}.mark{display:grid;place-items:center;background:#087e8b;color:white;width:34px;height:34px;border-radius:0}nav{display:flex;align-items:center;gap:24px}nav a,.link-button{color:#45616a;text-decoration:none;font:inherit}.user{font-size:13px;color:#64777e}.link-button{border:0;background:none;cursor:pointer}footer{text-align:center;color:#829399;padding:28px;font-size:12px}main{min-height:calc(100vh - 136px)}@media(max-width:650px){header{padding:0 16px}nav{gap:10px;font-size:13px}.user{display:none}}
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #f5f8f8;
+  color: #18313a;
+  font-family: Inter, system-ui, sans-serif;
+}
+header {
+  height: 72px;
+  background: #fff;
+  border-bottom: 1px solid #e5ecee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 max(24px, calc((100vw - 1160px) / 2));
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.brand {
+  font-size: 20px;
+  font-weight: 800;
+  color: #18313a;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mark {
+  display: grid;
+  place-items: center;
+  background: #087e8b;
+  color: white;
+  width: 34px;
+  height: 34px;
+  border-radius: 0;
+}
+nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+nav a,
+.link-button {
+  color: #45616a;
+  text-decoration: none;
+  font: inherit;
+}
+.user {
+  font-size: 13px;
+  color: #64777e;
+}
+.link-button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+footer {
+  text-align: center;
+  color: #829399;
+  padding: 28px;
+  font-size: 12px;
+}
+main {
+  min-height: calc(100vh - 136px);
+}
+@media (max-width: 650px) {
+  header {
+    padding: 0 16px;
+  }
+  nav {
+    gap: 10px;
+    font-size: 13px;
+  }
+  .user {
+    display: none;
+  }
+}

@@ -4,18 +4,129 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-@Component({selector:'app-register-user',standalone:true,imports:[ReactiveFormsModule,MatButtonModule,MatSnackBarModule],template:
-`<section class="card"><p class="eyebrow">GESTIÓN DE ACCESOS</p><h1>Registrar usuario</h1><form [formGroup]="form" (ngSubmit)="submit()">
-  <label>Nombre completo<input formControlName="fullName" autocomplete="name" maxlength="120"><small class="hint">Obligatorio · entre 2 y 120 caracteres.</small>@if(form.controls.fullName.touched||form.controls.fullName.dirty){@if(form.controls.fullName.hasError("required")){<small class="field-error">Escribe el nombre completo.</small>}@else if(form.controls.fullName.hasError("minlength")){<small class="field-error">Debe tener al menos 2 caracteres.</small>}@else if(form.controls.fullName.hasError("maxlength")){<small class="field-error">No puede superar 120 caracteres.</small>}}</label>
-  <label>Correo<input type="email" formControlName="email" autocomplete="username" maxlength="254"><small class="hint">Obligatorio · usa un formato como nombre@empresa.com.</small>@if(form.controls.email.touched||form.controls.email.dirty){@if(form.controls.email.hasError("required")){<small class="field-error">Escribe el correo electrónico.</small>}@else if(form.controls.email.hasError("email")){<small class="field-error">Revisa el formato; debe ser un correo válido.</small>}@else if(form.controls.email.hasError("maxlength")){<small class="field-error">El correo no puede superar 254 caracteres.</small>}}</label>
-  <label>Contraseña<input type="password" formControlName="password" autocomplete="new-password" minlength="10" maxlength="100"><small class="hint">Obligatoria · entre 10 y 100 caracteres. Ahora: {{form.controls.password.value.length}}.</small>@if(form.controls.password.touched||form.controls.password.dirty){@if(form.controls.password.hasError("required")){<small class="field-error">Escribe una contraseña.</small>}@else if(form.controls.password.hasError("minlength")){<small class="field-error">Le faltan {{10-form.controls.password.value.length}} caracteres; debe tener al menos 10.</small>}@else if(form.controls.password.hasError("maxlength")){<small class="field-error">Tiene {{form.controls.password.value.length}} caracteres; el máximo es 100.</small>}}</label>
-  <label>Rol<select formControlName="role"><option value="OPERATOR">Operador</option><option value="SUPERVISOR">Supervisor</option></select><small class="hint">El supervisor puede gestionar usuarios.</small></label>
-  @if(error()){<p class="error" role="alert">{{error()}}</p>}@if(done()){<p class="success" role="status">Usuario registrado.</p>}
-  <button mat-flat-button color="primary" [disabled]="form.invalid || busy()">{{busy()?"Registrando…":"Registrar"}}</button>
-</form></section>`
-,styles:[':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px;border-radius:0;box-shadow:none}.eyebrow{font-size:12px;color:#64777e;letter-spacing:.08em}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;border-radius:0;font:inherit}.hint{color:#64777e;font-size:12px}.field-error{color:#b42318;font-size:12px}button{background:#087e8b;color:white;padding:11px;border:0;border-radius:0;font-weight:700}.error{color:#b42318}.success{color:#087e8b}']})
+@Component({
+  selector: 'app-register-user',
+  standalone: true,
+  imports: [ReactiveFormsModule, MatButtonModule, MatSnackBarModule],
+  template: `<section class="card">
+    <p class="eyebrow">GESTIÓN DE ACCESOS</p>
+    <h1>Registrar usuario</h1>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <label
+        >Nombre completo<input
+          formControlName="fullName"
+          autocomplete="name"
+          maxlength="120"
+        /><small class="hint">Obligatorio · entre 2 y 120 caracteres.</small>
+        @if (form.controls.fullName.touched || form.controls.fullName.dirty) {
+          @if (form.controls.fullName.hasError('required')) {
+            <small class="field-error">Escribe el nombre completo.</small>
+          } @else if (form.controls.fullName.hasError('minlength')) {
+            <small class="field-error">Debe tener al menos 2 caracteres.</small>
+          } @else if (form.controls.fullName.hasError('maxlength')) {
+            <small class="field-error">No puede superar 120 caracteres.</small>
+          }
+        }
+      </label>
+      <label
+        >Correo<input
+          type="email"
+          formControlName="email"
+          autocomplete="username"
+          maxlength="254"
+        /><small class="hint">Obligatorio · usa un formato como nombre@empresa.com.</small>
+        @if (form.controls.email.touched || form.controls.email.dirty) {
+          @if (form.controls.email.hasError('required')) {
+            <small class="field-error">Escribe el correo electrónico.</small>
+          } @else if (form.controls.email.hasError('email')) {
+            <small class="field-error">Revisa el formato; debe ser un correo válido.</small>
+          } @else if (form.controls.email.hasError('maxlength')) {
+            <small class="field-error">El correo no puede superar 254 caracteres.</small>
+          }
+        }
+      </label>
+      <label
+        >Contraseña<input
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          minlength="10"
+          maxlength="100"
+        /><small class="hint"
+          >Obligatoria · entre 10 y 100 caracteres. Ahora:
+          {{ form.controls.password.value.length }}.</small
+        >
+        @if (form.controls.password.touched || form.controls.password.dirty) {
+          @if (form.controls.password.hasError('required')) {
+            <small class="field-error">Escribe una contraseña.</small>
+          } @else if (form.controls.password.hasError('minlength')) {
+            <small class="field-error"
+              >Le faltan {{ 10 - form.controls.password.value.length }} caracteres; debe tener al
+              menos 10.</small
+            >
+          } @else if (form.controls.password.hasError('maxlength')) {
+            <small class="field-error"
+              >Tiene {{ form.controls.password.value.length }} caracteres; el máximo es 100.</small
+            >
+          }
+        }
+      </label>
+      <label
+        >Rol<select formControlName="role">
+          <option value="OPERATOR">Operador</option>
+          <option value="SUPERVISOR">Supervisor</option></select
+        ><small class="hint">El supervisor puede gestionar usuarios.</small></label
+      >
+      @if (error()) {
+        <p class="error" role="alert">{{ error() }}</p>
+      }
+      @if (done()) {
+        <p class="success" role="status">Usuario registrado.</p>
+      }
+      <button mat-flat-button color="primary" [disabled]="form.invalid || busy()">
+        {{ busy() ? 'Registrando…' : 'Registrar' }}
+      </button>
+    </form>
+  </section>`,
+  styles: [
+    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px;border-radius:0;box-shadow:none}.eyebrow{font-size:12px;color:#64777e;letter-spacing:.08em}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;border-radius:0;font:inherit}.hint{color:#64777e;font-size:12px}.field-error{color:#b42318;font-size:12px}button{background:#087e8b;color:white;padding:11px;border:0;border-radius:0;font-weight:700}.error{color:#b42318}.success{color:#087e8b}',
+  ],
+})
 export class RegisterUserComponent {
- private fb=inject(FormBuilder);private auth=inject(AuthService);private router=inject(Router);private snackBar=inject(MatSnackBar);readonly busy=signal(false);readonly done=signal(false);readonly error=signal('');
- readonly form=this.fb.nonNullable.group({fullName:['',[Validators.required,Validators.minLength(2),Validators.maxLength(120)]],email:['',[Validators.required,Validators.email,Validators.maxLength(254)]],password:['',[Validators.required,Validators.minLength(10),Validators.maxLength(100)]],role:['OPERATOR' as 'OPERATOR'|'SUPERVISOR',Validators.required]});
- submit(){if(this.form.invalid){this.form.markAllAsTouched();this.error.set('Revisa los mensajes bajo cada campo.');return;}this.busy.set(true);this.error.set('');this.done.set(false);this.auth.register(this.form.getRawValue()).subscribe({next:()=>{this.done.set(true);this.form.reset({fullName:'',email:'',password:'',role:'OPERATOR'});this.busy.set(false);},error:e=>{const message=e.error?.message??'No se pudo registrar';this.error.set(message);this.snackBar.open(message,'Cerrar',{duration:5000});this.busy.set(false);}});}
+  private fb = inject(FormBuilder);
+  private auth = inject(AuthService);
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
+  readonly busy = signal(false);
+  readonly done = signal(false);
+  readonly error = signal('');
+  readonly form = this.fb.nonNullable.group({
+    fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
+    password: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(100)]],
+    role: ['OPERATOR' as 'OPERATOR' | 'SUPERVISOR', Validators.required],
+  });
+  submit() {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.error.set('Revisa los mensajes bajo cada campo.');
+      return;
+    }
+    this.busy.set(true);
+    this.error.set('');
+    this.done.set(false);
+    this.auth.register(this.form.getRawValue()).subscribe({
+      next: () => {
+        this.done.set(true);
+        this.form.reset({ fullName: '', email: '', password: '', role: 'OPERATOR' });
+        this.busy.set(false);
+      },
+      error: (e) => {
+        const message = e.error?.message ?? 'No se pudo registrar';
+        this.error.set(message);
+        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.busy.set(false);
+      },
+    });
+  }
 }

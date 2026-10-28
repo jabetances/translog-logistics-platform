@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { assertTransition, canTransition, ShipmentStatus as S } from './shipment-status.js';
+import {
+  assertTransition,
+  canTransition,
+  ShipmentStatus as S,
+} from './shipment-status.js';
 
 describe('shipment transitions', () => {
   it('allows the normal delivery flow', () => {
@@ -9,7 +13,9 @@ describe('shipment transitions', () => {
     expect(canTransition(S.OUT_FOR_DELIVERY, S.DELIVERED)).toBe(true);
   });
   it('rejects skipping steps and changing delivered shipments', () => {
-    expect(() => assertTransition(S.CREATED, S.DELIVERED)).toThrow(/No se puede cambiar el estado del envío/);
+    expect(() => assertTransition(S.CREATED, S.DELIVERED)).toThrow(
+      /No se puede cambiar el estado del envío/,
+    );
     expect(canTransition(S.DELIVERED, S.CANCELLED)).toBe(false);
   });
 });

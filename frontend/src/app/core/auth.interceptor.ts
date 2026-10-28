@@ -12,11 +12,13 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
     ? request.clone({ setHeaders: { Authorization: 'Bearer ' + token } })
     : request;
 
-  return next(authorizedRequest).pipe(catchError((error: unknown) => {
-    if (error instanceof HttpErrorResponse && error.status === 401 && token && auth.token) {
-      auth.logout();
-      void router.navigate(['/login']);
-    }
-    return throwError(() => error);
-  }));
+  return next(authorizedRequest).pipe(
+    catchError((error: unknown) => {
+      if (error instanceof HttpErrorResponse && error.status === 401 && token && auth.token) {
+        auth.logout();
+        void router.navigate(['/login']);
+      }
+      return throwError(() => error);
+    }),
+  );
 };

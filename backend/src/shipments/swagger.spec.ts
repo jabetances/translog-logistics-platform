@@ -17,8 +17,14 @@ describe('shipment Swagger documentation', () => {
     await app.init();
 
     try {
-      const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('test').addBearerAuth().build());
-      const schemas = document.components?.schemas as Record<string, { properties?: Record<string, unknown> }>;
+      const document = SwaggerModule.createDocument(
+        app,
+        new DocumentBuilder().setTitle('test').addBearerAuth().build(),
+      );
+      const schemas = document.components?.schemas as Record<
+        string,
+        { properties?: Record<string, unknown> }
+      >;
       const createProperties = schemas.CreateShipmentDto.properties;
       const assignProperties = schemas.AssignVehiclesDto.properties;
 
@@ -26,8 +32,12 @@ describe('shipment Swagger documentation', () => {
       expect(createProperties).toHaveProperty('weightKg');
       expect(assignProperties).toHaveProperty('shipmentIds');
       expect(assignProperties).toHaveProperty('vehicleCapacity');
-      expect(document.paths['/shipments']?.post?.summary).toBe('Crear un envío');
-      expect(document.paths['/shipments/assign-vehicles']?.post?.summary).toContain('First Fit Decreasing');
+      expect(document.paths['/shipments']?.post?.summary).toBe(
+        'Crear un envío',
+      );
+      expect(
+        document.paths['/shipments/assign-vehicles']?.post?.summary,
+      ).toContain('First Fit Decreasing');
     } finally {
       await app.close();
     }

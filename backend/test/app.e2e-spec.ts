@@ -35,9 +35,16 @@ describe('ShipmentsController HTTP smoke test', () => {
   afterAll(async () => app.close());
 
   it('rechaza UUIDs inválidos antes de consultar el servicio', async () => {
-    await request(app.getHttpServer()).get('/api/shipments/not-a-uuid').expect(400);
-    await request(app.getHttpServer()).patch('/api/shipments/not-a-uuid/status').send({}).expect(400);
-    await request(app.getHttpServer()).delete('/api/shipments/not-a-uuid').expect(400);
+    await request(app.getHttpServer())
+      .get('/api/shipments/not-a-uuid')
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch('/api/shipments/not-a-uuid/status')
+      .send({})
+      .expect(400);
+    await request(app.getHttpServer())
+      .delete('/api/shipments/not-a-uuid')
+      .expect(400);
 
     expect(service.findOne).not.toHaveBeenCalled();
     expect(service.updateStatus).not.toHaveBeenCalled();
@@ -48,7 +55,9 @@ describe('ShipmentsController HTTP smoke test', () => {
     const id = '123e4567-e89b-42d3-a456-426614174000';
     service.findOne.mockResolvedValueOnce({ id, trackingCode: 'ENV-test' });
 
-    await request(app.getHttpServer()).get('/api/shipments/' + id).expect(200, { id, trackingCode: 'ENV-test' });
+    await request(app.getHttpServer())
+      .get('/api/shipments/' + id)
+      .expect(200, { id, trackingCode: 'ENV-test' });
     expect(service.findOne).toHaveBeenCalledWith(id);
   });
 });

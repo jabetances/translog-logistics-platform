@@ -11,5 +11,22 @@ import { UsersController } from '../users/users.controller.js';
 import { AuthService } from './auth.service.js';
 import { JwtStrategy } from './jwt.strategy.js';
 import { RolesGuard } from './roles.guard.js';
-@Module({ imports: [TypeOrmModule.forFeature([User, Shipment, ShipmentEvent]), PassportModule, ConfigModule, JwtModule.registerAsync({ imports: [ConfigModule], inject: [ConfigService], useFactory: (config: ConfigService) => ({ secret: config.getOrThrow<string>('JWT_SECRET'), signOptions: { expiresIn: '8h' } }) })], controllers: [AuthController, UsersController], providers: [AuthService, JwtStrategy, RolesGuard], exports: [JwtModule, PassportModule, JwtStrategy] })
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([User, Shipment, ShipmentEvent]),
+    PassportModule,
+    ConfigModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.getOrThrow<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '8h' },
+      }),
+    }),
+  ],
+  controllers: [AuthController, UsersController],
+  providers: [AuthService, JwtStrategy, RolesGuard],
+  exports: [JwtModule, PassportModule, JwtStrategy],
+})
 export class AuthModule {}

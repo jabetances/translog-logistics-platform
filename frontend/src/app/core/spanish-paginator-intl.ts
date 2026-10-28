@@ -14,7 +14,7 @@ export class SpanishPaginatorIntl extends MatPaginatorIntl {
       if (length === 0 || pageSize === 0) return '0 de ' + length;
       const startIndex = page * pageSize;
       const endIndex = Math.min(startIndex + pageSize, length);
-      return (startIndex + 1) + '–' + endIndex + ' de ' + length;
+      return startIndex + 1 + '–' + endIndex + ' de ' + length;
     };
   }
 }

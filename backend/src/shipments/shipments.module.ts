@@ -6,5 +6,10 @@ import { ShipmentsService } from './shipments.service.js';
 import { ShipmentsController } from './shipments.controller.js';
 import { TrackingController } from './tracking.controller.js';
 import { AuthModule } from '../auth/auth.module.js';
-@Module({ imports: [TypeOrmModule.forFeature([Shipment, ShipmentEvent]), AuthModule], controllers: [ShipmentsController, TrackingController], providers: [ShipmentsService], exports: [ShipmentsService] })
+@Module({
+  imports: [TypeOrmModule.forFeature([Shipment, ShipmentEvent]), AuthModule],
+  controllers: [ShipmentsController, TrackingController],
+  providers: [ShipmentsService],
+  exports: [ShipmentsService],
+})
 export class ShipmentsModule {}

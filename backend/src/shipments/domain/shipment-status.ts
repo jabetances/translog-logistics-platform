@@ -19,21 +19,48 @@ export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
 };
 
 const TRANSITIONS: Record<ShipmentStatus, readonly ShipmentStatus[]> = {
-  [ShipmentStatus.CREATED]: [ShipmentStatus.IN_WAREHOUSE, ShipmentStatus.CANCELLED],
-  [ShipmentStatus.IN_WAREHOUSE]: [ShipmentStatus.IN_TRANSIT, ShipmentStatus.RETURNED, ShipmentStatus.CANCELLED],
-  [ShipmentStatus.IN_TRANSIT]: [ShipmentStatus.OUT_FOR_DELIVERY, ShipmentStatus.RETURNED, ShipmentStatus.CANCELLED],
-  [ShipmentStatus.OUT_FOR_DELIVERY]: [ShipmentStatus.DELIVERED, ShipmentStatus.RETURNED, ShipmentStatus.CANCELLED],
+  [ShipmentStatus.CREATED]: [
+    ShipmentStatus.IN_WAREHOUSE,
+    ShipmentStatus.CANCELLED,
+  ],
+  [ShipmentStatus.IN_WAREHOUSE]: [
+    ShipmentStatus.IN_TRANSIT,
+    ShipmentStatus.RETURNED,
+    ShipmentStatus.CANCELLED,
+  ],
+  [ShipmentStatus.IN_TRANSIT]: [
+    ShipmentStatus.OUT_FOR_DELIVERY,
+    ShipmentStatus.RETURNED,
+    ShipmentStatus.CANCELLED,
+  ],
+  [ShipmentStatus.OUT_FOR_DELIVERY]: [
+    ShipmentStatus.DELIVERED,
+    ShipmentStatus.RETURNED,
+    ShipmentStatus.CANCELLED,
+  ],
   [ShipmentStatus.DELIVERED]: [],
   [ShipmentStatus.RETURNED]: [ShipmentStatus.CANCELLED],
   [ShipmentStatus.CANCELLED]: [],
 };
 
-export function canTransition(from: ShipmentStatus, to: ShipmentStatus): boolean {
+export function canTransition(
+  from: ShipmentStatus,
+  to: ShipmentStatus,
+): boolean {
   return TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-export function assertTransition(from: ShipmentStatus, to: ShipmentStatus): void {
+export function assertTransition(
+  from: ShipmentStatus,
+  to: ShipmentStatus,
+): void {
   if (!canTransition(from, to)) {
-    throw new Error('No se puede cambiar el estado del envío de «' + SHIPMENT_STATUS_LABELS[from] + '» a «' + SHIPMENT_STATUS_LABELS[to] + '».');
+    throw new Error(
+      'No se puede cambiar el estado del envío de «' +
+        SHIPMENT_STATUS_LABELS[from] +
+        '» a «' +
+        SHIPMENT_STATUS_LABELS[to] +
+        '».',
+    );
   }
 }

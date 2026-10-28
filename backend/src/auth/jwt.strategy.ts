@@ -8,12 +8,22 @@ import { User } from '../users/user.entity.js';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(config: ConfigService, @InjectRepository(User) private readonly users: Repository<User>) {
-    super({ jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), ignoreExpiration: false, secretOrKey: config.getOrThrow<string>('JWT_SECRET') });
+  constructor(
+    config: ConfigService,
+    @InjectRepository(User) private readonly users: Repository<User>,
+  ) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: config.getOrThrow<string>('JWT_SECRET'),
+    });
   }
 
   async validate(payload: { sub: string; email: string; role: string }) {
-    const user = await this.users.findOne({ where: { id: payload.sub }, select: { id: true, email: true, role: true } });
+    const user = await this.users.findOne({
+      where: { id: payload.sub },
+      select: { id: true, email: true, role: true },
+    });
     if (!user) throw new UnauthorizedException('La cuenta ya no está activa');
     return { sub: user.id, email: user.email, role: user.role };
   }
