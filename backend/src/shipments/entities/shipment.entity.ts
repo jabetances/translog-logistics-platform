@@ -23,7 +23,6 @@ export const numericToNumberTransformer: ValueTransformer = {
 export class Shipment {
   @PrimaryGeneratedColumn('uuid') id!: string;
 
-  @Index({ unique: true })
   @Column({ unique: true, length: 24 })
   trackingCode!: string;
 

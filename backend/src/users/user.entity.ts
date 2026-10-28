@@ -4,7 +4,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  Index,
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
@@ -23,7 +22,6 @@ export class User {
   id!: string;
 
   @ApiProperty({ example: 'operador@translog.es', maxLength: 254 })
-  @Index({ unique: true })
   @Column({ unique: true, length: 254 })
   email!: string;
 
