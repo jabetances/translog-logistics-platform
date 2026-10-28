@@ -1,13 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, In } from 'typeorm';
+import { DataSource, Repository, In, ILike } from 'typeorm';
 import { randomInt } from 'node:crypto';
 import { Shipment } from './entities/shipment.entity.js';
 import { ShipmentEvent } from './entities/shipment-event.entity.js';
 import { CreateShipmentDto } from './dto/create-shipment.dto.js';
 import { UpdateStatusDto } from './dto/update-status.dto.js';
 import { assignVehiclesFFD } from './domain/assign-vehicles.js';
-import { assertTransition, ShipmentStatus } from './domain/shipment-status.js';
+import { assertTransition, ShipmentStatus, SHIPMENT_STATUS_LABELS } from './domain/shipment-status.js';
 
 @Injectable()
 export class ShipmentsService {
@@ -32,9 +32,18 @@ export class ShipmentsService {
     throw new ConflictException('No se pudo generar un código de seguimiento único');
   }
 
-  async list(page = 1, limit = 20, status?: ShipmentStatus) {
+  async list(page = 1, limit = 20, status?: ShipmentStatus, search?: string) {
     const safePage = Math.max(1, page); const safeLimit = Math.min(100, Math.max(1, limit));
-    const [data, total] = await this.shipments.findAndCount({ where: status ? { status } : {}, order: { createdAt: 'DESC' }, skip: (safePage - 1) * safeLimit, take: safeLimit });
+    const term = search?.trim();
+    const statusFilter = status ? { status } : {};
+    const where = term ? [
+      { ...statusFilter, trackingCode: ILike('%' + term + '%') },
+      { ...statusFilter, recipientName: ILike('%' + term + '%') },
+      { ...statusFilter, originAddress: ILike('%' + term + '%') },
+      { ...statusFilter, destinationAddress: ILike('%' + term + '%') },
+      { ...statusFilter, contactPhone: ILike('%' + term + '%') },
+    ] : statusFilter;
+    const [data, total] = await this.shipments.findAndCount({ where, order: { createdAt: 'DESC' }, skip: (safePage - 1) * safeLimit, take: safeLimit });
     return { data, pagination: { page: safePage, limit: safeLimit, total, totalPages: Math.ceil(total / safeLimit) } };
   }
 
@@ -76,7 +85,7 @@ export class ShipmentsService {
     const rows = await this.shipments.findBy({ id: In(ids) });
     if (rows.length !== new Set(ids).size) throw new NotFoundException('Uno o más envíos no existen');
     const invalid = rows.filter((row) => row.status !== ShipmentStatus.IN_WAREHOUSE);
-    if (invalid.length) throw new BadRequestException('Todos los envíos deben estar en estado IN_WAREHOUSE: ' + invalid.map((x) => x.trackingCode).join(', '));
+    if (invalid.length) throw new BadRequestException('Todos los envíos deben estar en estado «' + SHIPMENT_STATUS_LABELS[ShipmentStatus.IN_WAREHOUSE] + '»: ' + invalid.map((x) => x.trackingCode).join(', '));
     try { return assignVehiclesFFD(rows.map((row) => ({ shipmentId: row.id, trackingCode: row.trackingCode, weight: Number(row.weightKg) })), capacity); }
     catch (error) { throw new BadRequestException(error instanceof Error ? error.message : 'No se pudo asignar la carga'); }
   }

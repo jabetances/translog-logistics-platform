@@ -7,7 +7,7 @@ export interface Shipment { id: string; trackingCode: string; recipientName: str
 @Injectable({ providedIn: 'root' })
 export class ShipmentsService {
   constructor(private http: HttpClient) {}
-  list(page = 1, status?: string) { let params = new HttpParams().set('page', page); if (status) params = params.set('status', status); return this.http.get<{data: Shipment[]; pagination: {page:number;total:number;totalPages:number}}>(API + '/shipments', {params}); }
+  list(page = 1, status?: string, search?: string) { let params = new HttpParams().set('page', page); if (status) params = params.set('status', status); if (search?.trim()) params = params.set('q', search.trim()); return this.http.get<{data: Shipment[]; pagination: {page:number;total:number;totalPages:number}}>(API + '/shipments', {params}); }
   create(data: {originAddress:string; destinationAddress:string; recipientName:string; contactPhone?:string; weightKg:number}) { return this.http.post<Shipment>(API + '/shipments', data); }
   detail(id: string) { return this.http.get<Shipment>(API + '/shipments/' + id); }
   changeStatus(id: string, data: {status:ShipmentStatus;location:string;notes?:string}) { return this.http.patch<Shipment>(API + '/shipments/' + id + '/status', data); }
