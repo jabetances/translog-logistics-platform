@@ -1,3 +1,5 @@
+![CI](https://github.com/jabetances/translog-logistics-platform/actions/workflows/ci.yml/badge.svg)
+
 # TransLog — sistema de logística
 
 Monorepo para la prueba técnica: API NestJS + PostgreSQL y frontend Angular standalone con Angular Material.
