@@ -34,7 +34,11 @@ La base de datos crea sus tablas automáticamente solo en este entorno de desarr
 
 `User` representa operador/supervisor; `Shipment` contiene estado actual, peso y datos de entrega; `ShipmentEvent` conserva el historial con responsable, fecha, ubicación y notas. Los cambios de estado corren dentro de transacciones y bloquean la fila para prevenir carreras. El endpoint público no revela identificadores ni usuarios internos.
 
-Los estados internos son `CREATED`, `IN_WAREHOUSE`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`, `DELIVERED`, `RETURNED` y `CANCELLED`; corresponden al flujo descrito en la prueba. Las transiciones se validan en el dominio.
+Los estados internos son `CREATED`, `IN_WAREHOUSE`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`, `DELIVERED`, `RETURNED` y `CANCELLED`. La interpretación aplicada es: `CREATED → IN_WAREHOUSE → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`; se puede cancelar antes de entregar y registrar `RETURNED` desde almacén, tránsito o reparto cuando el paquete vuelve al remitente. `RETURNED → CANCELLED` cierra administrativamente esa devolución. `DELIVERED` y `CANCELLED` son terminales. Las transiciones se validan en el dominio y cada cambio conserva un evento.
+
+El componente de fecha del código `ENV-AAAAMMDD-XXXX` usa el calendario de `Europe/Madrid`; así no cambia al día anterior por convertir primero a UTC. Los reintentos de creación se limitan a colisiones PostgreSQL `23505` y a cinco intentos; otros errores de infraestructura se propagan inmediatamente.
+
+La tabla de envíos usa Angular Material `mat-table` y `mat-paginator` con etiquetas en español. Los errores HTTP muestran un `MatSnackBar` además del mensaje contextual de cada pantalla.
 
 First Fit Decreasing (FFD) ordena los paquetes de mayor a menor peso y coloca cada uno en el primer vehículo con espacio disponible. No es óptimo global; tiene complejidad sencilla y da una solución determinista para el caso.
 

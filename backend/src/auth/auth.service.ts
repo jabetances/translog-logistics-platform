@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException, ForbiddenException, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -40,9 +40,5 @@ export class AuthService implements OnModuleInit {
     if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) throw new UnauthorizedException('Credenciales inválidas');
     const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email, role: user.role });
     return { accessToken, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
-  }
-  async registerBySupervisor(dto: RegisterDto, role: UserRole) {
-    if (role !== UserRole.SUPERVISOR) throw new ForbiddenException('No tienes permisos para esta operación.');
-    return this.register(dto);
   }
 }
