@@ -1,16 +1,13 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   Param,
-  ParseEnumPipe,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,7 +21,13 @@ import { CreateShipmentDto } from './dto/create-shipment.dto.js';
 import { UpdateStatusDto } from './dto/update-status.dto.js';
 import { AssignVehiclesDto } from './dto/assign-vehicles.dto.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthenticatedUser } from '../auth/current-user.decorator.js';
 import { ShipmentStatus } from './domain/shipment-status.js';
+import {
+  ListShipmentsQueryDto,
+  SHIPMENT_SORT_FIELDS,
+} from './dto/list-shipments-query.dto.js';
 
 @ApiTags('shipments')
 @ApiBearerAuth()
@@ -32,49 +35,53 @@ import { ShipmentStatus } from './domain/shipment-status.js';
 @Controller('shipments')
 export class ShipmentsController {
   constructor(private readonly service: ShipmentsService) {}
-  @Post() @ApiOperation({ summary: 'Crear un envío' }) create(
+  @Post()
+  @ApiOperation({ summary: 'Crear un envío' })
+  create(
     @Body() dto: CreateShipmentDto,
-    @Req() req: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.create(dto, req.user.sub);
+    return this.service.create(dto, user.sub);
   }
   @Get()
   @ApiOperation({ summary: 'Listar envíos con filtros y ordenación' })
   @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    minimum: 1,
+    default: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    minimum: 1,
+    maximum: 100,
+    default: 20,
+  })
+  @ApiQuery({ name: 'status', required: false, enum: ShipmentStatus })
+  @ApiQuery({ name: 'q', required: false, type: String, maxLength: 100 })
+  @ApiQuery({
     name: 'sortBy',
     required: false,
-    enum: [
-      'trackingCode',
-      'recipientName',
-      'destinationAddress',
-      'status',
-      'createdAt',
-    ],
+    enum: SHIPMENT_SORT_FIELDS,
+    default: 'createdAt',
   })
-  @ApiQuery({ name: 'sortDirection', required: false, enum: ['ASC', 'DESC'] })
-  list(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query(
-      'status',
-      new ParseEnumPipe(ShipmentStatus, {
-        optional: true,
-        exceptionFactory: () =>
-          new BadRequestException('El filtro de estado no es válido.'),
-      }),
-    )
-    status?: ShipmentStatus,
-    @Query('q') search?: string,
-    @Query('sortBy') sortBy?: string,
-    @Query('sortDirection') sortDirection?: string,
-  ) {
+  @ApiQuery({
+    name: 'sortDirection',
+    required: false,
+    enum: ['ASC', 'DESC'],
+    default: 'DESC',
+  })
+  list(@Query() query: ListShipmentsQueryDto) {
     return this.service.list(
-      Number(page) || 1,
-      Number(limit) || 20,
-      status,
-      search,
-      sortBy,
-      sortDirection,
+      query.page,
+      query.limit,
+      query.status,
+      query.q,
+      query.sortBy,
+      query.sortDirection,
     );
   }
   @Get(':id')
@@ -89,14 +96,17 @@ export class ShipmentsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateStatusDto,
-    @Req() req: any,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.service.updateStatus(id, dto, req.user.sub);
+    return this.service.updateStatus(id, dto, user.sub);
   }
   @Delete(':id')
   @ApiOperation({ summary: 'Cancelar un envío conservando su historial' })
-  cancel(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) {
-    return this.service.cancel(id, req.user.sub);
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.service.cancel(id, user.sub);
   }
   @Post('assign-vehicles')
   @ApiOperation({

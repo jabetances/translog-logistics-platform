@@ -1,4 +1,8 @@
-import { ExecutionContext, INestApplication } from '@nestjs/common';
+import {
+  ExecutionContext,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -9,6 +13,8 @@ import { ShipmentsService } from '../src/shipments/shipments.service.js';
 describe('ShipmentsController HTTP smoke test', () => {
   let app: INestApplication;
   const service = {
+    list: vi.fn(),
+    create: vi.fn(),
     findOne: vi.fn(),
     updateStatus: vi.fn(),
     cancel: vi.fn(),
@@ -29,6 +35,13 @@ describe('ShipmentsController HTTP smoke test', () => {
 
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
     await app.init();
   });
 
@@ -49,6 +62,51 @@ describe('ShipmentsController HTTP smoke test', () => {
     expect(service.findOne).not.toHaveBeenCalled();
     expect(service.updateStatus).not.toHaveBeenCalled();
     expect(service.cancel).not.toHaveBeenCalled();
+  });
+
+  it('inyecta el usuario autenticado al crear un envío', async () => {
+    const body = {
+      originAddress: 'Calle Mayor',
+      destinationAddress: 'Avenida Sol',
+      recipientName: 'Ana Pérez',
+      weightKg: 12.5,
+    };
+    const created = {
+      id: 'shipment-1',
+      trackingCode: 'ENV-20261028-AB12',
+      ...body,
+    };
+    service.create.mockResolvedValueOnce(created);
+
+    await request(app.getHttpServer())
+      .post('/api/shipments')
+      .send(body)
+      .expect(201, created);
+    expect(service.create).toHaveBeenCalledWith(body, 'test-user');
+  });
+
+  it('rechaza consultas inválidas y transforma las válidas', async () => {
+    await request(app.getHttpServer())
+      .get('/api/shipments?limit=abc&page=-3')
+      .expect(400);
+    expect(service.list).not.toHaveBeenCalled();
+
+    const result = {
+      data: [],
+      pagination: { page: 2, limit: 10, total: 0, totalPages: 0 },
+    };
+    service.list.mockResolvedValueOnce(result);
+    await request(app.getHttpServer())
+      .get('/api/shipments?page=2&limit=10&sortDirection=asc&q=%20ENV%20')
+      .expect(200, result);
+    expect(service.list).toHaveBeenCalledWith(
+      2,
+      10,
+      undefined,
+      'ENV',
+      'createdAt',
+      'ASC',
+    );
   });
 
   it('atiende el detalle para un UUID válido', async () => {

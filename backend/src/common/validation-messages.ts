@@ -16,6 +16,11 @@ const FIELD_LABELS: Record<string, string> = {
   notes: 'Las notas',
   shipmentIds: 'Los envíos seleccionados',
   vehicleCapacity: 'La capacidad del vehículo',
+  page: 'La página',
+  limit: 'El tamaño de página',
+  sortBy: 'El campo de ordenación',
+  sortDirection: 'El sentido de ordenación',
+  q: 'La búsqueda',
 };
 
 function fieldLabel(property: string): string {
@@ -40,6 +45,10 @@ function spanishMessage(
       return field + ' es obligatorio.';
     case 'isString':
       return field + ' debe ser texto.';
+    case 'isInt':
+      return field + ' debe ser un número entero.';
+    case 'isIn':
+      return field + ' tiene un valor no permitido.';
     case 'isEmail':
       return field + ' debe tener un formato de correo válido.';
     case 'isNumber':
