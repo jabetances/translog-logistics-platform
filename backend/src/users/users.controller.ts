@@ -32,9 +32,39 @@ export class UsersController {
   }
 
   @Patch(":id")
-  @ApiOperation({ summary: "Cambiar el nombre de un usuario (solo supervisor)" })
-  async update(@Param("id", ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
-    const result = await this.users.update(id, { fullName: dto.fullName });
+  @ApiOperation({ summary: "Actualizar nombre, correo o rol de un usuario (solo supervisor)" })
+  async update(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserDto,
+    @Req() request: { user: { sub: string } },
+  ) {
+    if (dto.fullName === undefined && dto.email === undefined && dto.role === undefined) {
+      throw new BadRequestException("Indica al menos un dato para actualizar");
+    }
+    if (dto.role !== undefined && request.user.sub === id) {
+      throw new BadRequestException("No puedes cambiar tu propio rol desde esta pantalla");
+    }
+
+    const user = await this.users.findOne({
+      where: { id },
+      select: { id: true, email: true, fullName: true, role: true, createdAt: true },
+    });
+    if (!user) throw new NotFoundException("Usuario no encontrado");
+
+    if (dto.email && dto.email !== user.email) {
+      const duplicate = await this.users.findOne({ where: { email: dto.email }, select: { id: true } });
+      if (duplicate && duplicate.id !== id) throw new ConflictException("Ese correo ya está asociado a otra cuenta");
+    }
+    if (user.role === UserRole.SUPERVISOR && dto.role === UserRole.OPERATOR) {
+      const supervisors = await this.users.count({ where: { role: UserRole.SUPERVISOR } });
+      if (supervisors <= 1) throw new ConflictException("No se puede degradar al último supervisor");
+    }
+
+    const changes: Partial<User> = {};
+    if (dto.fullName !== undefined) changes.fullName = dto.fullName;
+    if (dto.email !== undefined) changes.email = dto.email;
+    if (dto.role !== undefined) changes.role = dto.role;
+    const result = await this.users.update(id, changes);
     if (!result.affected) throw new NotFoundException("Usuario no encontrado");
     const updated = await this.users.findOne({
       where: { id },
