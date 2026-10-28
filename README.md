@@ -23,6 +23,8 @@ La base de datos crea sus tablas automáticamente solo en este entorno de desarr
 - `POST /api/auth/login` — JWT.
 - `POST /api/auth/register` — solo supervisor autenticado.
 - `GET /api/users` — listado de usuarios (solo supervisor); nunca devuelve contraseñas ni hashes.
+- `PATCH /api/users/:id` — cambiar el nombre de un usuario (solo supervisor).
+- `DELETE /api/users/:id` — eliminar usuarios sin envíos/eventos asociados; protege la cuenta activa y al último supervisor.
 - `POST /api/shipments`, `GET /api/shipments?page=1&limit=20&status=IN_WAREHOUSE&q=texto`, `GET /api/shipments/:id`. La lista admite filtro por estado y búsqueda opcional por código, destinatario, dirección o teléfono.
 - `PATCH /api/shipments/:id/status`, `DELETE /api/shipments/:id`.
 - `POST /api/shipments/assign-vehicles` — First Fit Decreasing; todos deben existir y estar IN_WAREHOUSE.
