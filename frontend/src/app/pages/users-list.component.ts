@@ -1,8 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService, AuthUser, ManagedUser } from '../core/auth.service';
+import { NotificationService } from '../core/notification.service';
 
 type UserSortField = 'fullName' | 'email' | 'role' | 'createdAt';
 
@@ -10,6 +11,7 @@ type UserSortField = 'fullName' | 'email' | 'role' | 'createdAt';
   selector: 'app-users-list',
   standalone: true,
   imports: [DatePipe, RouterLink, MatSnackBarModule],
+  providers: [NotificationService],
   template: `
     <section class="wrap">
       <div class="heading">
@@ -362,7 +364,7 @@ type UserSortField = 'fullName' | 'email' | 'role' | 'createdAt';
 })
 export class UsersListComponent {
   readonly auth = inject(AuthService);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly notifications = inject(NotificationService);
   readonly users = signal<ManagedUser[]>([]);
   readonly sortBy = signal<UserSortField>('createdAt');
   readonly sortDirection = signal<'ASC' | 'DESC'>('DESC');
@@ -439,7 +441,7 @@ export class UsersListComponent {
       error: (error) => {
         const message = error.error?.message ?? 'No se pudo cargar el listado de usuarios.';
         this.error.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.loading.set(false);
       },
     });
@@ -488,7 +490,7 @@ export class UsersListComponent {
       error: (error) => {
         const message = error.error?.message ?? 'No se pudieron guardar los cambios del usuario.';
         this.actionError.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.actionBusy.set(false);
       },
     });
@@ -507,7 +509,7 @@ export class UsersListComponent {
       error: (error) => {
         const message = error.error?.message ?? 'No se pudo eliminar el usuario.';
         this.actionError.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.actionBusy.set(false);
       },
     });

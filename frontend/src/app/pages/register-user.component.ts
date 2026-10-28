@@ -1,13 +1,15 @@
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { NotificationService } from '../core/notification.service';
 @Component({
   selector: 'app-register-user',
   standalone: true,
   imports: [ReactiveFormsModule, MatButtonModule, MatSnackBarModule],
+  providers: [NotificationService],
   template: `<section class="card">
     <p class="eyebrow">GESTIÓN DE ACCESOS</p>
     <h1>Registrar usuario</h1>
@@ -96,7 +98,7 @@ export class RegisterUserComponent {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
-  private snackBar = inject(MatSnackBar);
+  private notifications = inject(NotificationService);
   readonly busy = signal(false);
   readonly done = signal(false);
   readonly error = signal('');
@@ -124,7 +126,7 @@ export class RegisterUserComponent {
       error: (e) => {
         const message = e.error?.message ?? 'No se pudo registrar';
         this.error.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.busy.set(false);
       },
     });

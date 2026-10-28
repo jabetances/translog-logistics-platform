@@ -19,15 +19,18 @@ export interface Shipment {
   recipientName: string;
   destinationAddress: string;
   originAddress: string;
-  weightKg: string;
+  weightKg: number;
   status: ShipmentStatus;
   createdAt: string;
   deliveredAt?: string;
+  createdByName?: string | null;
+  allowedTransitions?: ShipmentStatus[];
   events?: Array<{
     id?: string;
     status: ShipmentStatus;
     location: string;
     notes?: string | null;
+    actorName?: string | null;
     createdAt: string;
   }>;
 }

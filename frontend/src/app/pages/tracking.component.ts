@@ -1,14 +1,16 @@
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PublicTracking, ShipmentsService, ShipmentStatus } from '../core/shipments.service';
 import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-status-labels';
+import { NotificationService } from '../core/notification.service';
 @Component({
   selector: 'app-tracking',
   standalone: true,
   imports: [ReactiveFormsModule, DatePipe, MatButtonModule, MatSnackBarModule],
+  providers: [NotificationService],
   template: `<section class="card">
     <p class="eyebrow">SEGUIMIENTO PÚBLICO</p>
     <h1>¿Dónde está tu envío?</h1>
@@ -106,7 +108,7 @@ import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-
 export class TrackingComponent {
   private fb = inject(FormBuilder);
   private service = inject(ShipmentsService);
-  private snackBar = inject(MatSnackBar);
+  private notifications = inject(NotificationService);
   readonly statusLabel = shipmentStatusLabel;
   readonly statusBadgeClass = shipmentStatusBadgeClass;
   readonly loading = signal(false);
@@ -131,7 +133,7 @@ export class TrackingComponent {
       error: (e) => {
         const message = e.error?.message ?? 'No se encontró el envío';
         this.error.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.loading.set(false);
       },
     });

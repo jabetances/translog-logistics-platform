@@ -1,7 +1,7 @@
 import { MatButtonModule } from '@angular/material/button';
 import { MatPaginatorIntl, MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTableModule } from '@angular/material/table';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { SpanishPaginatorIntl } from '../core/spanish-paginator-intl';
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
@@ -21,6 +21,7 @@ import {
   SortDirection,
 } from '../core/shipments.service';
 import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-status-labels';
+import { NotificationService } from '../core/notification.service';
 
 const optionalPhoneLengthValidator: ValidatorFn = (control: AbstractControl) => {
   const value = String(control.value ?? '').trim();
@@ -47,7 +48,7 @@ const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
     MatTableModule,
     MatSnackBarModule,
   ],
-  providers: [{ provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl }],
+  providers: [{ provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl }, NotificationService],
   template: `<section class="wrap">
     <div class="heading">
       <div>
@@ -277,7 +278,7 @@ const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
 export class ShipmentsComponent {
   private fb = inject(FormBuilder);
   private api = inject(ShipmentsService);
-  private snackBar = inject(MatSnackBar);
+  private notifications = inject(NotificationService);
   readonly statusLabel = shipmentStatusLabel;
   readonly statusBadgeClass = shipmentStatusBadgeClass;
   readonly shipments = signal<Shipment[]>([]);
@@ -347,7 +348,7 @@ export class ShipmentsComponent {
         error: (e) => {
           const message = e.error?.message ?? 'No se pudo cargar la lista';
           this.error.set(message);
-          this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+          this.notifications.showError(message);
           this.busy.set(false);
         },
       });
@@ -421,7 +422,7 @@ export class ShipmentsComponent {
       error: (e) => {
         const message = e.error?.message ?? 'No se pudo crear';
         this.error.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.busy.set(false);
       },
     });

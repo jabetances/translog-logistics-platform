@@ -1,15 +1,17 @@
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Component, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ShipmentsService, Shipment, ShipmentStatus } from '../core/shipments.service';
 import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-status-labels';
+import { NotificationService } from '../core/notification.service';
 @Component({
   selector: 'app-shipment-detail',
   standalone: true,
   imports: [DatePipe, RouterLink, ReactiveFormsModule, MatButtonModule, MatSnackBarModule],
+  providers: [NotificationService],
   template: `<section class="wrap">
     <a routerLink="/shipments">← Volver a envíos</a>
     @if (shipment(); as item) {
@@ -28,6 +30,7 @@ import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-
           <p><b>Origen</b><br />{{ item.originAddress }}</p>
           <p><b>Peso</b><br />{{ item.weightKg }} kg</p>
           <p><b>Creado</b><br />{{ item.createdAt | date: 'd MMM y, HH:mm:ss' }}</p>
+          <p><b>Creado por</b><br />{{ item.createdByName ?? 'Sistema' }}</p>
           @if (item.deliveredAt) {
             <p><b>Entregado</b><br />{{ item.deliveredAt | date: 'd MMM y, HH:mm:ss' }}</p>
           }
@@ -36,7 +39,7 @@ import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-
           <form class="update" [formGroup]="form" (ngSubmit)="update()">
             <h2>Actualizar estado</h2>
             <select formControlName="status">
-              @for (s of nextStatuses(item.status); track s) {
+              @for (s of item.allowedTransitions ?? []; track s) {
                 <option [value]="s">{{ statusLabel(s) }}</option>
               }</select
             ><label class="field"
@@ -88,6 +91,7 @@ import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-
             <li>
               <span class="dot"></span><strong>{{ statusLabel(event.status) }}</strong>
               <p>{{ event.location }} · {{ event.createdAt | date: 'd MMM y, HH:mm:ss' }}</p>
+              <small>Responsable: {{ event.actorName ?? 'Sistema' }}</small>
               @if (event.notes) {
                 <small>{{ event.notes }}</small>
               }
@@ -105,7 +109,7 @@ export class ShipmentDetailComponent {
   private route = inject(ActivatedRoute);
   private api = inject(ShipmentsService);
   private fb = inject(FormBuilder);
-  private snackBar = inject(MatSnackBar);
+  private notifications = inject(NotificationService);
   readonly statusLabel = shipmentStatusLabel;
   readonly statusBadgeClass = shipmentStatusBadgeClass;
   readonly shipment = signal<Shipment | null>(null);
@@ -131,27 +135,15 @@ export class ShipmentDetailComponent {
     this.api.detail(this.route.snapshot.paramMap.get('id')!).subscribe({
       next: (r) => {
         this.shipment.set(r);
-        const next = this.nextStatuses(r.status)[0];
+        const next = r.allowedTransitions?.[0];
         if (next) this.form.controls.status.setValue(next);
       },
       error: (e) => {
         const message = e.error?.message ?? 'No se encontró el envío';
         this.error.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
       },
     });
-  }
-  nextStatuses(s: ShipmentStatus) {
-    const map: Record<ShipmentStatus, ShipmentStatus[]> = {
-      CREATED: ['IN_WAREHOUSE', 'CANCELLED'],
-      IN_WAREHOUSE: ['IN_TRANSIT', 'RETURNED', 'CANCELLED'],
-      IN_TRANSIT: ['OUT_FOR_DELIVERY', 'RETURNED', 'CANCELLED'],
-      OUT_FOR_DELIVERY: ['DELIVERED', 'RETURNED', 'CANCELLED'],
-      DELIVERED: [],
-      RETURNED: ['CANCELLED'],
-      CANCELLED: [],
-    };
-    return map[s];
   }
   update() {
     if (this.form.invalid) return;
@@ -166,7 +158,7 @@ export class ShipmentDetailComponent {
         error: (e) => {
           const message = e.error?.message ?? 'Transición no válida';
           this.error.set(message);
-          this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+          this.notifications.showError(message);
           this.busy.set(false);
         },
       });
@@ -184,7 +176,7 @@ export class ShipmentDetailComponent {
       error: (e) => {
         const message = e.error?.message ?? 'No se pudo cancelar';
         this.error.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.busy.set(false);
       },
     });

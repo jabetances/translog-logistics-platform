@@ -1,13 +1,15 @@
 import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { NotificationService } from '../core/notification.service';
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink, MatButtonModule, MatSnackBarModule],
+  providers: [NotificationService],
   template: `<section class="card narrow">
     <p class="eyebrow">ACCESO DE OPERADORES</p>
     <h1>Iniciar sesión</h1>
@@ -108,7 +110,7 @@ export class LoginComponent {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
-  private snackBar = inject(MatSnackBar);
+  private notifications = inject(NotificationService);
   readonly loading = signal(false);
   readonly error = signal('');
   readonly form = this.fb.nonNullable.group({
@@ -127,7 +129,7 @@ export class LoginComponent {
       error: (e) => {
         const message = e.error?.message ?? 'No se pudo iniciar sesión';
         this.error.set(message);
-        this.snackBar.open(message, 'Cerrar', { duration: 5000 });
+        this.notifications.showError(message);
         this.loading.set(false);
       },
     });
