@@ -15,6 +15,7 @@ import { UpdateStatusDto } from './dto/update-status.dto.js';
 import { assignVehiclesFFD } from './domain/assign-vehicles.js';
 import {
   assertTransition,
+  getAllowedTransitions,
   ShipmentStatus,
   SHIPMENT_STATUS_LABELS,
 } from './domain/shipment-status.js';
@@ -67,7 +68,7 @@ export class ShipmentsService {
               destinationAddress: dto.destinationAddress,
               recipientName: dto.recipientName,
               contactPhone: dto.contactPhone ?? null,
-              weightKg: String(dto.weightKg),
+              weightKg: dto.weightKg,
               status: ShipmentStatus.CREATED,
               trackingCode,
               createdById: actorId,
@@ -154,18 +155,41 @@ export class ShipmentsService {
   async findOne(id: string) {
     const shipment = await this.shipments.findOne({
       where: { id },
-      relations: { events: true },
+      relations: { createdBy: true, events: { actor: true } },
     });
     if (!shipment) throw new NotFoundException('Envío no encontrado');
     shipment.events.sort(
       (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
     );
-    return shipment;
+    return {
+      id: shipment.id,
+      trackingCode: shipment.trackingCode,
+      originAddress: shipment.originAddress,
+      destinationAddress: shipment.destinationAddress,
+      recipientName: shipment.recipientName,
+      contactPhone: shipment.contactPhone,
+      weightKg: shipment.weightKg,
+      status: shipment.status,
+      deliveredAt: shipment.deliveredAt,
+      createdAt: shipment.createdAt,
+      updatedAt: shipment.updatedAt,
+      createdByName: shipment.createdBy.fullName,
+      allowedTransitions: getAllowedTransitions(shipment.status),
+      events: shipment.events.map((event) => ({
+        id: event.id,
+        status: event.status,
+        location: event.location,
+        notes: event.notes,
+        createdAt: event.createdAt,
+        actorName: event.actor?.fullName ?? null,
+      })),
+    };
   }
 
   async track(code: string) {
+    const trackingCode = code.trim().toUpperCase();
     const shipment = await this.shipments.findOne({
-      where: { trackingCode: code },
+      where: { trackingCode },
       relations: { events: true },
     });
     if (!shipment)
@@ -258,7 +282,7 @@ export class ShipmentsService {
         rows.map((row) => ({
           shipmentId: row.id,
           trackingCode: row.trackingCode,
-          weight: Number(row.weightKg),
+          weight: row.weightKg,
         })),
         capacity,
       );

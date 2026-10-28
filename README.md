@@ -32,7 +32,11 @@ La base de datos crea sus tablas automáticamente solo en este entorno de desarr
 
 ## Modelo y decisiones
 
-`User` representa operador/supervisor; `Shipment` contiene estado actual, peso y datos de entrega; `ShipmentEvent` conserva el historial con responsable, fecha, ubicación y notas. Los cambios de estado corren dentro de transacciones y bloquean la fila para prevenir carreras. El endpoint público no revela identificadores ni usuarios internos.
+`User` representa operador/supervisor; `Shipment` contiene estado actual, peso y datos de entrega; `ShipmentEvent` conserva el historial con responsable, fecha, ubicación y notas. `Shipment.createdById` y `ShipmentEvent.actorId` tienen relaciones y FK a `User` con borrado restrictivo; la vista interna muestra nombres de responsables, mientras el tracking público no los revela. Los cambios de estado corren dentro de transacciones y bloquean la fila para prevenir carreras. El endpoint público no revela identificadores ni usuarios internos.
+
+El listado valida sus parámetros mediante `ListShipmentsQueryDto` (`page` entero positivo, `limit` de 1 a 100, filtros/orden permitidos y búsqueda de hasta 100 caracteres). El `numeric(10,3)` de PostgreSQL se transforma a `number` en la API. El código público de tracking se normaliza a mayúsculas; la proyección pública omite los responsables.
+
+En desarrollo, el `.env.example` activa `DB_SYNCHRONIZE`. Para aplicar el cambio de FK en un entorno sin sincronización, configura `DB_SYNCHRONIZE=false` y `DB_MIGRATIONS_RUN=true`: la migración comprueba referencias huérfanas antes de añadir restricciones y aborta sin reasignar datos si encuentra alguna.
 
 Los estados internos son `CREATED`, `IN_WAREHOUSE`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`, `DELIVERED`, `RETURNED` y `CANCELLED`. La interpretación aplicada es: `CREATED → IN_WAREHOUSE → IN_TRANSIT → OUT_FOR_DELIVERY → DELIVERED`; se puede cancelar antes de entregar y registrar `RETURNED` desde almacén, tránsito o reparto cuando el paquete vuelve al remitente. `RETURNED → CANCELLED` cierra administrativamente esa devolución. `DELIVERED` y `CANCELLED` son terminales. Las transiciones se validan en el dominio y cada cambio conserva un evento.
 

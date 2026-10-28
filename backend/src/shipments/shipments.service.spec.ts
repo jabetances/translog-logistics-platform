@@ -88,3 +88,90 @@ describe('tracking-code generation helpers', () => {
     );
   });
 });
+
+describe('ShipmentsService.track', () => {
+  it('normaliza el código y no expone al actor en el seguimiento público', async () => {
+    const findOne = vi.fn().mockResolvedValue({
+      trackingCode: 'ENV-20261028-AB12',
+      status: ShipmentStatus.IN_TRANSIT,
+      createdAt: new Date('2026-10-28T12:00:00.000Z'),
+      deliveredAt: null,
+      events: [
+        {
+          id: 'event-1',
+          actorId: 'private-user-id',
+          actor: { fullName: 'Operador Interno' },
+          status: ShipmentStatus.IN_TRANSIT,
+          location: 'Centro logístico',
+          notes: null,
+          createdAt: new Date('2026-10-28T12:00:00.000Z'),
+        },
+      ],
+    });
+    const service = new ShipmentsService(
+      { findOne } as unknown as Repository<Shipment>,
+      {} as DataSource,
+    );
+
+    const result = await service.track(' env-20261028-ab12 ');
+
+    expect(findOne).toHaveBeenCalledWith({
+      where: { trackingCode: 'ENV-20261028-AB12' },
+      relations: { events: true },
+    });
+    expect(result.events[0]).not.toHaveProperty('actorId');
+    expect(result.events[0]).not.toHaveProperty('actorName');
+    expect(JSON.stringify(result)).not.toContain('Operador Interno');
+  });
+});
+
+describe('ShipmentsService.findOne', () => {
+  it('incluye responsables y transiciones sin devolver sus UUIDs', async () => {
+    const findOne = vi.fn().mockResolvedValue({
+      id: 'shipment-1',
+      trackingCode: 'ENV-20261028-AB12',
+      originAddress: 'Origen',
+      destinationAddress: 'Destino',
+      recipientName: 'Ana',
+      contactPhone: null,
+      weightKg: 67,
+      status: ShipmentStatus.IN_TRANSIT,
+      deliveredAt: null,
+      createdAt: new Date('2026-10-28T09:00:00.000Z'),
+      updatedAt: new Date('2026-10-28T10:00:00.000Z'),
+      createdById: 'creator-private-id',
+      createdBy: { fullName: 'Supervisora' },
+      events: [
+        {
+          id: 'event-1',
+          actorId: 'operator-private-id',
+          actor: { fullName: 'Operador A' },
+          status: ShipmentStatus.IN_TRANSIT,
+          location: 'Centro logístico',
+          notes: null,
+          createdAt: new Date('2026-10-28T10:00:00.000Z'),
+        },
+      ],
+    });
+    const service = new ShipmentsService(
+      { findOne } as unknown as Repository<Shipment>,
+      {} as DataSource,
+    );
+
+    const detail = await service.findOne('shipment-1');
+
+    expect(findOne).toHaveBeenCalledWith({
+      where: { id: 'shipment-1' },
+      relations: { createdBy: true, events: { actor: true } },
+    });
+    expect(detail.createdByName).toBe('Supervisora');
+    expect(detail.allowedTransitions).toEqual([
+      'OUT_FOR_DELIVERY',
+      'RETURNED',
+      'CANCELLED',
+    ]);
+    expect(detail.events[0].actorName).toBe('Operador A');
+    expect(detail).not.toHaveProperty('createdById');
+    expect(detail.events[0]).not.toHaveProperty('actorId');
+  });
+});

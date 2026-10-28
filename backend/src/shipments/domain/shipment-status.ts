@@ -43,6 +43,10 @@ const TRANSITIONS: Record<ShipmentStatus, readonly ShipmentStatus[]> = {
   [ShipmentStatus.CANCELLED]: [],
 };
 
+export function getAllowedTransitions(from: ShipmentStatus): ShipmentStatus[] {
+  return [...TRANSITIONS[from]];
+}
+
 export function canTransition(
   from: ShipmentStatus,
   to: ShipmentStatus,
