@@ -14,20 +14,36 @@ import { AuthService, ManagedUser } from "../core/auth.service";
         <a class="button" routerLink="/users/new">+ Nuevo usuario</a>
       </div>
       @if (loading()) { <p>Cargando usuarios…</p> }
-      @if (error()) { <p class="error">{{ error() }}</p> }
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      @if (actionError()) { <p class="error" role="alert">{{ actionError() }}</p> }
       @if (!loading() && !error()) {
         <div class="table">
           <table>
-            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th><th>Acciones</th></tr></thead>
             <tbody>
               @for (item of users(); track item.id) {
                 <tr>
-                  <td data-label="Nombre">{{ item.fullName }}</td>
+                  <td data-label="Nombre">
+                    @if (editingId() === item.id) {
+                      <input class="edit-name" aria-label="Nombre completo" [value]="editName()" (input)="editName.set($any($event.target).value)" (keyup.enter)="saveName(item)">
+                    } @else { {{ item.fullName }} }
+                  </td>
                   <td data-label="Correo">{{ item.email }}</td>
                   <td data-label="Rol">{{ roleLabel(item.role) }}</td>
                   <td data-label="Alta">{{ item.createdAt | date:"d/M/yy, HH:mm" }}</td>
+                  <td data-label="Acciones">
+                    <div class="actions">
+                      @if (editingId() === item.id) {
+                        <button type="button" (click)="saveName(item)" [disabled]="actionBusy()">Guardar</button>
+                        <button type="button" (click)="cancelEdit()" [disabled]="actionBusy()">Cancelar</button>
+                      } @else {
+                        <button type="button" (click)="startEdit(item)" [disabled]="actionBusy()">Editar</button>
+                        <button class="danger" type="button" (click)="deleteUser(item)" [disabled]="actionBusy() || auth.user()?.id === item.id" [title]="auth.user()?.id === item.id ? 'No puedes eliminar tu propia cuenta' : 'Eliminar usuario'">Eliminar</button>
+                      }
+                    </div>
+                  </td>
                 </tr>
-              } @empty { <tr><td colspan="4">No hay usuarios registrados.</td></tr> }
+              } @empty { <tr><td colspan="5">No hay usuarios registrados.</td></tr> }
             </tbody>
           </table>
         </div>
@@ -43,8 +59,13 @@ import { AuthService, ManagedUser } from "../core/auth.service";
     .button{display:inline-flex;align-items:center;justify-content:center;padding:11px 18px;background:#087e8b;color:white;text-decoration:none;font-weight:700}
     .table{overflow:auto;border-top:1px solid #d6e1e4}
     table{width:100%;border-collapse:collapse;text-align:left;font-size:14px}
-    th,td{padding:15px;border-bottom:1px solid #edf1f2}
+    th,td{padding:15px;border-bottom:1px solid #edf1f2;vertical-align:middle}
     th{color:#64777e;font-size:12px}
+    .actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .actions button{padding:7px 10px;background:#fff;border:1px solid #d6e1e4;color:#18313a;font:inherit;cursor:pointer}
+    .actions button.danger{color:#b42318;border-color:#efc3c3}
+    .actions button:disabled{opacity:.5;cursor:not-allowed}
+    .edit-name{width:100%;min-width:0;padding:8px;border:1px solid #087e8b;font:inherit}
     .error{color:#b42318}
     @media(max-width:650px){
       .heading{align-items:flex-start;flex-direction:column}
@@ -56,14 +77,19 @@ import { AuthService, ManagedUser } from "../core/auth.service";
       td::before{content:attr(data-label);font-weight:700;color:#64777e}
       td[colspan]{display:block}
       td[colspan]::before{content:none}
+      .actions{align-items:stretch}
     }
   `],
 })
 export class UsersListComponent {
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   readonly users = signal<ManagedUser[]>([]);
   readonly loading = signal(true);
   readonly error = signal("");
+  readonly actionError = signal("");
+  readonly actionBusy = signal(false);
+  readonly editingId = signal<string | null>(null);
+  readonly editName = signal("");
   readonly roleLabel = (role: ManagedUser["role"]) => role === "SUPERVISOR" ? "Supervisor" : "Operador";
 
   constructor() { this.load(); }
@@ -74,6 +100,56 @@ export class UsersListComponent {
     this.auth.listUsers().subscribe({
       next: (users) => { this.users.set(users); this.loading.set(false); },
       error: (error) => { this.error.set(error.error?.message ?? "No se pudo cargar el listado de usuarios."); this.loading.set(false); },
+    });
+  }
+
+  startEdit(user: ManagedUser) {
+    this.actionError.set("");
+    this.editingId.set(user.id);
+    this.editName.set(user.fullName);
+  }
+
+  cancelEdit() {
+    this.editingId.set(null);
+    this.editName.set("");
+    this.actionError.set("");
+  }
+
+  saveName(user: ManagedUser) {
+    const fullName = this.editName().trim();
+    if (fullName.length < 2 || fullName.length > 120) {
+      this.actionError.set("El nombre completo debe tener entre 2 y 120 caracteres.");
+      return;
+    }
+    this.actionBusy.set(true);
+    this.actionError.set("");
+    this.auth.updateUser(user.id, { fullName }).subscribe({
+      next: (updated) => {
+        this.users.update((rows) => rows.map((row) => row.id === updated.id ? updated : row));
+        this.cancelEdit();
+        this.actionBusy.set(false);
+      },
+      error: (error) => {
+        this.actionError.set(error.error?.message ?? "No se pudo actualizar el nombre.");
+        this.actionBusy.set(false);
+      },
+    });
+  }
+
+  deleteUser(user: ManagedUser) {
+    if (user.id === this.auth.user()?.id) return;
+    if (!window.confirm(`¿Eliminar a ${user.fullName}? Esta acción no se puede deshacer.`)) return;
+    this.actionBusy.set(true);
+    this.actionError.set("");
+    this.auth.deleteUser(user.id).subscribe({
+      next: () => {
+        this.users.update((rows) => rows.filter((row) => row.id !== user.id));
+        this.actionBusy.set(false);
+      },
+      error: (error) => {
+        this.actionError.set(error.error?.message ?? "No se pudo eliminar el usuario.");
+        this.actionBusy.set(false);
+      },
     });
   }
 }
