@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: translog
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: translog
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U translog -d translog"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: translog
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      DB_NAME: translog
+      DB_SYNCHRONIZE: "true"
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      BOOTSTRAP_SUPERVISOR_EMAIL: ${BOOTSTRAP_SUPERVISOR_EMAIL:?Set BOOTSTRAP_SUPERVISOR_EMAIL in .env}
+      BOOTSTRAP_SUPERVISOR_PASSWORD: ${BOOTSTRAP_SUPERVISOR_PASSWORD:?Set BOOTSTRAP_SUPERVISOR_PASSWORD in .env}
+      BOOTSTRAP_SUPERVISOR_NAME: ${BOOTSTRAP_SUPERVISOR_NAME:-Supervisor inicial}
+      CORS_ORIGIN: http://localhost:4200
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  frontend:
+    build: ./frontend
+    ports: ["127.0.0.1:4200:4200"]
+    depends_on: [backend]
+volumes:
+  postgres_data:

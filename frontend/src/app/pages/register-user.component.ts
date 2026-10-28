@@ -1,0 +1,12 @@
+import { MatButtonModule } from '@angular/material/button';
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../core/auth.service';
+@Component({selector:'app-register-user',standalone:true,imports:[ReactiveFormsModule,MatButtonModule],template:
+'<section class="card"><p class="eyebrow">GESTIÓN DE ACCESOS</p><h1>Registrar usuario</h1><form [formGroup]="form" (ngSubmit)="submit()"><label>Nombre completo<input formControlName="fullName"></label><label>Correo<input type="email" formControlName="email"></label><label>Contraseña (mínimo 10 caracteres)<input type="password" formControlName="password"></label><label>Rol<select formControlName="role"><option value="OPERATOR">Operador</option><option value="SUPERVISOR">Supervisor</option></select></label>@if(error()){<p class="error">{{error()}}</p>}@if(done()){<p class="success">Usuario registrado.</p>}<button mat-flat-button color="primary" [disabled]="form.invalid || busy()">Registrar</button></form></section>',styles:[':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px;border-radius:14px;box-shadow:0 8px 30px #102d3b0c}.eyebrow{font-size:12px;color:#64777e;letter-spacing:.08em}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;border-radius:8px;font:inherit}button{background:#087e8b;color:white;padding:11px;border:0;border-radius:8px;font-weight:700}.error{color:#b42318}.success{color:#087e8b}']})
+export class RegisterUserComponent {
+ private fb=inject(FormBuilder);private auth=inject(AuthService);private router=inject(Router);readonly busy=signal(false);readonly done=signal(false);readonly error=signal('');
+ readonly form=this.fb.nonNullable.group({fullName:['',[Validators.required,Validators.minLength(2)]],email:['',[Validators.required,Validators.email]],password:['',[Validators.required,Validators.minLength(10)]],role:['OPERATOR' as 'OPERATOR'|'SUPERVISOR',Validators.required]});
+ submit(){if(this.form.invalid)return;this.busy.set(true);this.error.set('');this.done.set(false);this.auth.register(this.form.getRawValue()).subscribe({next:()=>{this.done.set(true);this.form.reset({fullName:'',email:'',password:'',role:'OPERATOR'});this.busy.set(false);},error:e=>{this.error.set(e.error?.message??'No se pudo registrar');this.busy.set(false);}});}
+}

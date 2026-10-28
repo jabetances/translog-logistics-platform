@@ -1,0 +1,10 @@
+.env
+**/.env
+**/node_modules
+**/dist
+**/coverage
+**/.angular
+**/package-lock.json
+!backend/package-lock.json
+!frontend/package-lock.json
+*.tsbuildinfo
