@@ -40,7 +40,8 @@ First Fit Decreasing (FFD) ordena los paquetes de mayor a menor peso y coloca ca
 
 ## Verificación
 
-- Backend: `cd backend && npm test && npm run build`.
+- Backend: `cd backend && npm test && npm run build && npm run lint`.
+- HTTP e2e aislado (sin base de datos): `cd backend && npm run test:e2e`.
 - Frontend: `cd frontend && npm run build`.
 - Datos seed: el supervisor se crea al iniciar solo si se definen `BOOTSTRAP_SUPERVISOR_EMAIL` y `BOOTSTRAP_SUPERVISOR_PASSWORD` y aún no hay supervisor.
 

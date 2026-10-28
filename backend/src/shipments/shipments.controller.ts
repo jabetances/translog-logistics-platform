@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, ParseEnumPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ShipmentsService } from './shipments.service.js';
 import { CreateShipmentDto } from './dto/create-shipment.dto.js';
@@ -12,8 +12,8 @@ export class ShipmentsController {
   constructor(private readonly service: ShipmentsService) {}
   @Post() @ApiOperation({ summary: 'Crear un envío' }) create(@Body() dto: CreateShipmentDto, @Req() req: any) { return this.service.create(dto, req.user.sub); }
   @Get() @ApiOperation({ summary: 'Listar envíos con filtros y ordenación' }) @ApiQuery({ name: 'sortBy', required: false, enum: ['trackingCode', 'recipientName', 'destinationAddress', 'status', 'createdAt'] }) @ApiQuery({ name: 'sortDirection', required: false, enum: ['ASC', 'DESC'] }) list(@Query('page') page?: string, @Query('limit') limit?: string, @Query('status', new ParseEnumPipe(ShipmentStatus, { optional: true, exceptionFactory: () => new BadRequestException('El filtro de estado no es válido.') })) status?: ShipmentStatus, @Query('q') search?: string, @Query('sortBy') sortBy?: string, @Query('sortDirection') sortDirection?: string) { return this.service.list(Number(page) || 1, Number(limit) || 20, status, search, sortBy, sortDirection); }
-  @Get(':id') detail(@Param('id') id: string) { return this.service.findOne(id); }
-  @Patch(':id/status') update(@Param('id') id: string, @Body() dto: UpdateStatusDto, @Req() req: any) { return this.service.updateStatus(id, dto, req.user.sub); }
-  @Delete(':id') cancel(@Param('id') id: string, @Req() req: any) { return this.service.cancel(id, req.user.sub); }
+  @Get(':id') detail(@Param('id', ParseUUIDPipe) id: string) { return this.service.findOne(id); }
+  @Patch(':id/status') update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateStatusDto, @Req() req: any) { return this.service.updateStatus(id, dto, req.user.sub); }
+  @Delete(':id') cancel(@Param('id', ParseUUIDPipe) id: string, @Req() req: any) { return this.service.cancel(id, req.user.sub); }
   @Post('assign-vehicles') assign(@Body() dto: AssignVehiclesDto) { return this.service.assign(dto.shipmentIds, dto.vehicleCapacity); }
 }
