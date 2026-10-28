@@ -10,12 +10,24 @@ import { UpdateStatusDto } from './dto/update-status.dto.js';
 import { assignVehiclesFFD } from './domain/assign-vehicles.js';
 import { assertTransition, ShipmentStatus, SHIPMENT_STATUS_LABELS } from './domain/shipment-status.js';
 
+export function trackingDateMadrid(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return value('year') + value('month') + value('day');
+}
+
+export function isPostgresUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = 'driverError' in error ? error.driverError : error;
+  return !!candidate && typeof candidate === 'object' && 'code' in candidate && candidate.code === '23505';
+}
+
 @Injectable()
 export class ShipmentsService {
   constructor(@InjectRepository(Shipment) private readonly shipments: Repository<Shipment>, private readonly dataSource: DataSource) {}
 
   async create(dto: CreateShipmentDto, actorId: string) {
-    const day = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    const day = trackingDateMadrid(new Date());
     for (let attempt = 0; attempt < 5; attempt++) {
       const suffix = randomInt(36 ** 4).toString(36).padStart(4, '0').toUpperCase();
       const trackingCode = 'ENV-' + day + '-' + suffix;
@@ -27,7 +39,7 @@ export class ShipmentsService {
           return repo.findOne({ where: { id: shipment.id }, relations: { events: true } });
         });
       } catch (error) {
-        if (attempt === 4) throw error;
+        if (!isPostgresUniqueViolation(error)) throw error;
       }
     }
     throw new ConflictException('No se pudo generar un código de seguimiento único');
