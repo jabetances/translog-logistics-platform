@@ -1,7 +1,7 @@
 import { DatePipe } from "@angular/common";
 import { Component, computed, inject, signal } from "@angular/core";
 import { RouterLink } from "@angular/router";
-import { AuthService, ManagedUser } from "../core/auth.service";
+import { AuthService, AuthUser, ManagedUser } from "../core/auth.service";
 
 type UserSortField = "fullName" | "email" | "role" | "createdAt";
 
@@ -28,16 +28,16 @@ type UserSortField = "fullName" | "email" | "role" | "createdAt";
                 <tr>
                   <td data-label="Nombre">
                     @if (editingId() === item.id) {
-                      <input class="edit-name" aria-label="Nombre completo" [value]="editName()" (input)="editName.set($any($event.target).value)" (keyup.enter)="saveName(item)">
+                      <input class="edit-name" aria-label="Nombre completo" [value]="editName()" (input)="editName.set($any($event.target).value)" (keyup.enter)="saveUser(item)">
                     } @else { {{ item.fullName }} }
                   </td>
-                  <td data-label="Correo">{{ item.email }}</td>
-                  <td data-label="Rol">{{ roleLabel(item.role) }}</td>
+                  <td data-label="Correo">@if(editingId()===item.id){<input class="edit-email" type="email" aria-label="Correo del usuario" maxlength="254" [value]="editEmail()" (input)="editEmail.set($any($event.target).value)" (keyup.enter)="saveUser(item)">}@else{ {{item.email}} }</td>
+                  <td data-label="Rol">@if(editingId()===item.id){<select class="edit-role" aria-label="Rol del usuario" [value]="editRole()" [disabled]="auth.user()?.id===item.id" (change)="editRole.set($any($event.target).value)"><option value="OPERATOR">Operador</option><option value="SUPERVISOR">Supervisor</option></select>@if(auth.user()?.id===item.id){<small class="role-hint">Tu propio rol no se cambia aquí.</small>}}@else{ {{roleLabel(item.role)}} }</td>
                   <td data-label="Alta">{{ item.createdAt | date:"d/M/yy, HH:mm" }}</td>
                   <td data-label="Acciones">
                     <div class="actions">
                       @if (editingId() === item.id) {
-                        <button type="button" (click)="saveName(item)" [disabled]="actionBusy()">Guardar</button>
+                        <button type="button" (click)="saveUser(item)" [disabled]="actionBusy()">Guardar</button>
                         <button type="button" (click)="cancelEdit()" [disabled]="actionBusy()">Cancelar</button>
                       } @else {
                         <button type="button" (click)="startEdit(item)" [disabled]="actionBusy()">Editar</button>
@@ -70,7 +70,7 @@ type UserSortField = "fullName" | "email" | "role" | "createdAt";
     .actions button{padding:7px 10px;background:#fff;border:1px solid #d6e1e4;color:#18313a;font:inherit;cursor:pointer}
     .actions button.danger{color:#b42318;border-color:#efc3c3}
     .actions button:disabled{opacity:.5;cursor:not-allowed}
-    .edit-name{width:100%;min-width:0;padding:8px;border:1px solid #087e8b;font:inherit}
+    .edit-name,.edit-email,.edit-role{width:100%;min-width:0;padding:8px;border:1px solid #087e8b;font:inherit;background:#fff}.role-hint{display:block;margin-top:4px;color:#64777e;font-size:11px}
     .error{color:#b42318}
     @media(max-width:650px){
       .heading{align-items:flex-start;flex-direction:column}
@@ -112,6 +112,8 @@ export class UsersListComponent {
   readonly actionBusy = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly editName = signal("");
+  readonly editEmail = signal("");
+  readonly editRole = signal<AuthUser["role"]>("OPERATOR");
   readonly roleLabel = (role: ManagedUser["role"]) => role === "SUPERVISOR" ? "Supervisor" : "Operador";
 
   toggleSort(field: UserSortField) {
@@ -148,30 +150,41 @@ export class UsersListComponent {
     this.actionError.set("");
     this.editingId.set(user.id);
     this.editName.set(user.fullName);
+    this.editEmail.set(user.email);
+    this.editRole.set(user.role);
   }
 
   cancelEdit() {
     this.editingId.set(null);
     this.editName.set("");
+    this.editEmail.set("");
+    this.editRole.set("OPERATOR");
     this.actionError.set("");
   }
 
-  saveName(user: ManagedUser) {
+  saveUser(user: ManagedUser) {
     const fullName = this.editName().trim();
+    const email = this.editEmail().trim().toLowerCase();
     if (fullName.length < 2 || fullName.length > 120) {
       this.actionError.set("El nombre completo debe tener entre 2 y 120 caracteres.");
       return;
     }
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) {
+      this.actionError.set("Introduce un correo válido, por ejemplo nombre@empresa.com.");
+      return;
+    }
+    const changes: {fullName: string; email: string; role?: AuthUser["role"]} = { fullName, email };
+    if (user.id !== this.auth.user()?.id) changes.role = this.editRole();
     this.actionBusy.set(true);
     this.actionError.set("");
-    this.auth.updateUser(user.id, { fullName }).subscribe({
+    this.auth.updateUser(user.id, changes).subscribe({
       next: (updated) => {
         this.users.update((rows) => rows.map((row) => row.id === updated.id ? updated : row));
         this.cancelEdit();
         this.actionBusy.set(false);
       },
       error: (error) => {
-        this.actionError.set(error.error?.message ?? "No se pudo actualizar el nombre.");
+        this.actionError.set(error.error?.message ?? "No se pudieron guardar los cambios del usuario.");
         this.actionBusy.set(false);
       },
     });
