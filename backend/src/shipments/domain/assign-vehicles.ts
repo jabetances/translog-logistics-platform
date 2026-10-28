@@ -16,13 +16,13 @@ export function assignVehiclesFFD(shipments: readonly WeightedShipment[], capaci
   totalVehiclesUsed: number;
   totalWeight: number;
 } {
-  if (!Number.isFinite(capacity) || capacity <= 0) throw new Error('vehicleCapacity must be a positive number');
+  if (!Number.isFinite(capacity) || capacity <= 0) throw new Error('La capacidad del vehículo debe ser un número positivo.');
   const ids = new Set<string>();
   for (const shipment of shipments) {
-    if (!shipment.shipmentId || ids.has(shipment.shipmentId)) throw new Error('shipmentIds must be non-empty and unique');
+    if (!shipment.shipmentId || ids.has(shipment.shipmentId)) throw new Error('Los identificadores de envío no pueden estar vacíos ni repetirse.');
     ids.add(shipment.shipmentId);
-    if (!Number.isFinite(shipment.weight) || shipment.weight <= 0) throw new Error('Shipment weights must be positive finite numbers');
-    if (shipment.weight > capacity) throw new Error('Shipment ' + shipment.shipmentId + ' exceeds vehicle capacity (' + shipment.weight + ' kg > ' + capacity + ' kg)');
+    if (!Number.isFinite(shipment.weight) || shipment.weight <= 0) throw new Error('El peso de cada envío debe ser un número finito y positivo.');
+    if (shipment.weight > capacity) throw new Error('El envío ' + shipment.shipmentId + ' supera la capacidad del vehículo (' + shipment.weight + ' kg > ' + capacity + ' kg).');
   }
   const sorted = [...shipments].sort((a, b) => b.weight - a.weight || a.shipmentId.localeCompare(b.shipmentId));
   const vehicles: AssignedVehicle[] = [];

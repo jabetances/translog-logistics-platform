@@ -9,7 +9,7 @@ describe('shipment transitions', () => {
     expect(canTransition(S.OUT_FOR_DELIVERY, S.DELIVERED)).toBe(true);
   });
   it('rejects skipping steps and changing delivered shipments', () => {
-    expect(() => assertTransition(S.CREATED, S.DELIVERED)).toThrow(/Invalid shipment status transition/);
+    expect(() => assertTransition(S.CREATED, S.DELIVERED)).toThrow(/No se puede cambiar el estado del envío/);
     expect(canTransition(S.DELIVERED, S.CANCELLED)).toBe(false);
   });
 });

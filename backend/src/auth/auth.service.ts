@@ -17,7 +17,7 @@ export class AuthService implements OnModuleInit {
     if (await this.users.count({ where: { role: UserRole.SUPERVISOR } })) return;
     const existing = await this.users.findOne({ where: { email } });
     if (existing && existing.role !== UserRole.SUPERVISOR) {
-      throw new Error('BOOTSTRAP_SUPERVISOR_EMAIL already belongs to a non-supervisor; choose another email in backend/.env');
+      throw new Error('BOOTSTRAP_SUPERVISOR_EMAIL ya pertenece a una cuenta que no es supervisora; elige otro correo en backend/.env.');
     }
     await this.users.createQueryBuilder().insert().into(User).values({
       email,
@@ -26,7 +26,7 @@ export class AuthService implements OnModuleInit {
       passwordHash: await bcrypt.hash(password, 12),
     }).orIgnore().execute();
     if (!(await this.users.count({ where: { role: UserRole.SUPERVISOR } }))) {
-      throw new Error('Could not provision the bootstrap supervisor; check the configured email');
+      throw new Error('No se pudo crear la cuenta de supervisión inicial; revisa el correo configurado.');
     }
   }
   async register(dto: RegisterDto) {
@@ -42,7 +42,7 @@ export class AuthService implements OnModuleInit {
     return { accessToken, user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } };
   }
   async registerBySupervisor(dto: RegisterDto, role: UserRole) {
-    if (role !== UserRole.SUPERVISOR) throw new ForbiddenException();
+    if (role !== UserRole.SUPERVISOR) throw new ForbiddenException('No tienes permisos para esta operación.');
     return this.register(dto);
   }
 }

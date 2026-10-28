@@ -12,10 +12,10 @@ describe('assignVehiclesFFD', () => {
     expect(result.totalWeight).toBe(266.5);
   });
   it('fails clearly when a package does not fit', () => {
-    expect(() => assignVehiclesFFD([shipment('heavy', 101)], 100)).toThrow(/exceeds vehicle capacity/);
+    expect(() => assignVehiclesFFD([shipment('heavy', 101)], 100)).toThrow(/supera la capacidad del vehículo/);
   });
   it('rejects invalid capacity and duplicate IDs', () => {
-    expect(() => assignVehiclesFFD([], 0)).toThrow(/positive number/);
-    expect(() => assignVehiclesFFD([shipment('x', 2), shipment('x', 3)], 10)).toThrow(/unique/);
+    expect(() => assignVehiclesFFD([], 0)).toThrow(/número positivo/);
+    expect(() => assignVehiclesFFD([shipment('x', 2), shipment('x', 3)], 10)).toThrow(/repetirse/);
   });
 });

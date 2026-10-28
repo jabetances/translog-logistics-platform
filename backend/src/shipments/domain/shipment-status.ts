@@ -8,6 +8,16 @@ export enum ShipmentStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export const SHIPMENT_STATUS_LABELS: Record<ShipmentStatus, string> = {
+  [ShipmentStatus.CREATED]: 'Creado',
+  [ShipmentStatus.IN_WAREHOUSE]: 'En almacén',
+  [ShipmentStatus.IN_TRANSIT]: 'En tránsito',
+  [ShipmentStatus.OUT_FOR_DELIVERY]: 'En reparto',
+  [ShipmentStatus.DELIVERED]: 'Entregado',
+  [ShipmentStatus.RETURNED]: 'Devuelto',
+  [ShipmentStatus.CANCELLED]: 'Cancelado',
+};
+
 const TRANSITIONS: Record<ShipmentStatus, readonly ShipmentStatus[]> = {
   [ShipmentStatus.CREATED]: [ShipmentStatus.IN_WAREHOUSE, ShipmentStatus.CANCELLED],
   [ShipmentStatus.IN_WAREHOUSE]: [ShipmentStatus.IN_TRANSIT, ShipmentStatus.RETURNED, ShipmentStatus.CANCELLED],
@@ -24,6 +34,6 @@ export function canTransition(from: ShipmentStatus, to: ShipmentStatus): boolean
 
 export function assertTransition(from: ShipmentStatus, to: ShipmentStatus): void {
   if (!canTransition(from, to)) {
-    throw new Error('Invalid shipment status transition: ' + from + ' -> ' + to);
+    throw new Error('No se puede cambiar el estado del envío de «' + SHIPMENT_STATUS_LABELS[from] + '» a «' + SHIPMENT_STATUS_LABELS[to] + '».');
   }
 }
