@@ -1,7 +1,9 @@
 import { DatePipe } from "@angular/common";
-import { Component, inject, signal } from "@angular/core";
+import { Component, computed, inject, signal } from "@angular/core";
 import { RouterLink } from "@angular/router";
 import { AuthService, ManagedUser } from "../core/auth.service";
+
+type UserSortField = "fullName" | "email" | "role" | "createdAt";
 
 @Component({
   selector: "app-users-list",
@@ -13,15 +15,16 @@ import { AuthService, ManagedUser } from "../core/auth.service";
         <div><p class="eyebrow">GESTIÓN DE ACCESOS</p><h1>Usuarios</h1></div>
         <a class="button" routerLink="/users/new">+ Nuevo usuario</a>
       </div>
+      <div class="mobile-sort"><label>Ordenar por<select aria-label="Ordenar usuarios por" [value]="sortBy()" (change)="setSortBy($any($event.target).value)"><option value="fullName">Nombre</option><option value="email">Correo</option><option value="role">Rol</option><option value="createdAt">Alta</option></select></label><button type="button" (click)="toggleSortDirection()">{{sortDirection()==="ASC"?"Ascendente ↑":"Descendente ↓"}}</button></div>
       @if (loading()) { <p>Cargando usuarios…</p> }
       @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
       @if (actionError()) { <p class="error" role="alert">{{ actionError() }}</p> }
       @if (!loading() && !error()) {
         <div class="table">
           <table>
-            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Alta</th><th>Acciones</th></tr></thead>
+            <thead><tr><th [attr.aria-sort]="sortAria('fullName')"><button class="sort-button" type="button" (click)="toggleSort('fullName')">Nombre <span aria-hidden="true">{{sortIndicator('fullName')}}</span></button></th><th [attr.aria-sort]="sortAria('email')"><button class="sort-button" type="button" (click)="toggleSort('email')">Correo <span aria-hidden="true">{{sortIndicator('email')}}</span></button></th><th [attr.aria-sort]="sortAria('role')"><button class="sort-button" type="button" (click)="toggleSort('role')">Rol <span aria-hidden="true">{{sortIndicator('role')}}</span></button></th><th [attr.aria-sort]="sortAria('createdAt')"><button class="sort-button" type="button" (click)="toggleSort('createdAt')">Alta <span aria-hidden="true">{{sortIndicator('createdAt')}}</span></button></th><th>Acciones</th></tr></thead>
             <tbody>
-              @for (item of users(); track item.id) {
+              @for (item of sortedUsers(); track item.id) {
                 <tr>
                   <td data-label="Nombre">
                     @if (editingId() === item.id) {
@@ -55,6 +58,8 @@ import { AuthService, ManagedUser } from "../core/auth.service";
     .wrap{max-width:1160px;margin:40px auto;padding:0 22px}
     .heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
     .eyebrow{color:#64777e;font-size:12px;letter-spacing:.08em}
+    .sort-button{padding:0;background:none;border:0;color:inherit;font:inherit;font-weight:700;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+    .mobile-sort{display:none}
     h1{font-size:34px;margin:0}
     .button{display:inline-flex;align-items:center;justify-content:center;padding:11px 18px;background:#087e8b;color:white;text-decoration:none;font-weight:700}
     .table{overflow:auto;border-top:1px solid #d6e1e4}
@@ -69,6 +74,10 @@ import { AuthService, ManagedUser } from "../core/auth.service";
     .error{color:#b42318}
     @media(max-width:650px){
       .heading{align-items:flex-start;flex-direction:column}
+      .mobile-sort{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-bottom:12px}
+      .mobile-sort label{display:grid;gap:6px;font-size:12px;color:#64777e}
+      .mobile-sort select{width:100%;padding:8px;border:1px solid #d6e1e4;background:white;font:inherit}
+      .mobile-sort button{padding:8px 10px;border:1px solid #d6e1e4;background:white;font:inherit;white-space:nowrap}
       .table{overflow:visible}
       table,tbody{display:block;width:100%}
       thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -84,6 +93,19 @@ import { AuthService, ManagedUser } from "../core/auth.service";
 export class UsersListComponent {
   readonly auth = inject(AuthService);
   readonly users = signal<ManagedUser[]>([]);
+  readonly sortBy = signal<UserSortField>("createdAt");
+  readonly sortDirection = signal<"ASC" | "DESC">("DESC");
+  readonly sortedUsers = computed(() => {
+    const multiplier = this.sortDirection() === "ASC" ? 1 : -1;
+    const field = this.sortBy();
+    const collator = new Intl.Collator("es", { sensitivity: "base", numeric: true });
+    return [...this.users()].sort((a, b) => {
+      const result = field === "createdAt"
+        ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        : collator.compare(field === "role" ? this.roleLabel(a.role) : a[field], field === "role" ? this.roleLabel(b.role) : b[field]);
+      return result * multiplier;
+    });
+  });
   readonly loading = signal(true);
   readonly error = signal("");
   readonly actionError = signal("");
@@ -91,6 +113,25 @@ export class UsersListComponent {
   readonly editingId = signal<string | null>(null);
   readonly editName = signal("");
   readonly roleLabel = (role: ManagedUser["role"]) => role === "SUPERVISOR" ? "Supervisor" : "Operador";
+
+  toggleSort(field: UserSortField) {
+    if (this.sortBy() === field) this.toggleSortDirection();
+    else { this.sortBy.set(field); this.sortDirection.set("ASC"); }
+  }
+
+  setSortBy(value: string) {
+    const fields: UserSortField[] = ["fullName", "email", "role", "createdAt"];
+    if (fields.includes(value as UserSortField) && value !== this.sortBy()) {
+      this.sortBy.set(value as UserSortField);
+      this.sortDirection.set("ASC");
+    }
+  }
+
+  toggleSortDirection() { this.sortDirection.set(this.sortDirection() === "ASC" ? "DESC" : "ASC"); }
+
+  sortIndicator(field: UserSortField) { return this.sortBy() !== field ? "↕" : this.sortDirection() === "ASC" ? "↑" : "↓"; }
+
+  sortAria(field: UserSortField) { return this.sortBy() !== field ? "none" : this.sortDirection() === "ASC" ? "ascending" : "descending"; }
 
   constructor() { this.load(); }
 

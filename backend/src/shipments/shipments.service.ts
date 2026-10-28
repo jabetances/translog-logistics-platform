@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, In, ILike } from 'typeorm';
+import type { FindOptionsOrder } from 'typeorm';
 import { randomInt } from 'node:crypto';
 import { Shipment } from './entities/shipment.entity.js';
 import { ShipmentEvent } from './entities/shipment-event.entity.js';
@@ -32,8 +33,14 @@ export class ShipmentsService {
     throw new ConflictException('No se pudo generar un código de seguimiento único');
   }
 
-  async list(page = 1, limit = 20, status?: ShipmentStatus, search?: string) {
+  async list(page = 1, limit = 20, status?: ShipmentStatus, search?: string, sortBy?: string, sortDirection?: string) {
     const safePage = Math.max(1, page); const safeLimit = Math.min(100, Math.max(1, limit));
+    const sortableFields = ['trackingCode', 'recipientName', 'destinationAddress', 'status', 'createdAt'] as const;
+    const field = sortBy || 'createdAt';
+    if (!sortableFields.includes(field as typeof sortableFields[number])) throw new BadRequestException('El campo de ordenación no es válido.');
+    const direction = (sortDirection || 'DESC').toUpperCase();
+    if (direction !== 'ASC' && direction !== 'DESC') throw new BadRequestException('El sentido de ordenación debe ser ASC o DESC.');
+    const order = { [field]: direction, id: 'ASC' } as FindOptionsOrder<Shipment>;
     const term = search?.trim();
     const statusFilter = status ? { status } : {};
     const where = term ? [
@@ -43,7 +50,7 @@ export class ShipmentsService {
       { ...statusFilter, destinationAddress: ILike('%' + term + '%') },
       { ...statusFilter, contactPhone: ILike('%' + term + '%') },
     ] : statusFilter;
-    const [data, total] = await this.shipments.findAndCount({ where, order: { createdAt: 'DESC' }, skip: (safePage - 1) * safeLimit, take: safeLimit });
+    const [data, total] = await this.shipments.findAndCount({ where, order, skip: (safePage - 1) * safeLimit, take: safeLimit });
     return { data, pagination: { page: safePage, limit: safeLimit, total, totalPages: Math.ceil(total / safeLimit) } };
   }
 
