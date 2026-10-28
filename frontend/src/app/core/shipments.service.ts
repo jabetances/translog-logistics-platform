@@ -10,7 +10,7 @@ export interface PublicTracking { trackingCode: string; status: ShipmentStatus; 
 @Injectable({ providedIn: 'root' })
 export class ShipmentsService {
   constructor(private http: HttpClient) {}
-  list(page = 1, status?: string, search?: string, sortBy: ShipmentSortField = 'createdAt', sortDirection: SortDirection = 'DESC') { let params = new HttpParams().set('page', page).set('sortBy', sortBy).set('sortDirection', sortDirection); if (status) params = params.set('status', status); if (search?.trim()) params = params.set('q', search.trim()); return this.http.get<{data: Shipment[]; pagination: {page:number;total:number;totalPages:number}}>(API + '/shipments', {params}); }
+  list(page = 1, status?: string, search?: string, sortBy: ShipmentSortField = 'createdAt', sortDirection: SortDirection = 'DESC', limit = 20) { let params = new HttpParams().set('page', page).set('limit', limit).set('sortBy', sortBy).set('sortDirection', sortDirection); if (status) params = params.set('status', status); if (search?.trim()) params = params.set('q', search.trim()); return this.http.get<{data: Shipment[]; pagination: {page:number;total:number;totalPages:number}}>(API + '/shipments', {params}); }
   create(data: {originAddress:string; destinationAddress:string; recipientName:string; contactPhone?:string; weightKg:number}) { return this.http.post<Shipment>(API + '/shipments', data); }
   detail(id: string) { return this.http.get<Shipment>(API + '/shipments/' + id); }
   changeStatus(id: string, data: {status:ShipmentStatus;location:string;notes?:string}) { return this.http.patch<Shipment>(API + '/shipments/' + id + '/status', data); }
