@@ -72,14 +72,27 @@ import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-
         }
         <p>Consulta el historial de eventos del envío asociado a este código.</p>
         <h3>Historial</h3>
-        <ol>
-          @for (event of item.events; track event.createdAt) {
-            <li>
-              <strong>{{ statusLabel(event.status) }}</strong> · {{ event.location
-              }}<small>{{ event.createdAt | date: 'd MMM y, HH:mm:ss' }}</small>
-              @if (event.notes) {
-                <p>{{ event.notes }}</p>
-              }
+        <ol class="timeline" aria-label="Historial cronológico del envío">
+          @for (event of item.events; track event.id; let isLatest = $last) {
+            <li class="timeline-item" [attr.aria-current]="isLatest ? 'step' : null">
+              <span class="timeline-connector" aria-hidden="true"></span>
+              <span
+                class="timeline-dot"
+                [class.timeline-dot-latest]="isLatest"
+                aria-hidden="true"
+              ></span>
+              <div class="timeline-event">
+                <div class="timeline-heading">
+                  <strong>{{ statusLabel(event.status) }}</strong>
+                  <time [attr.datetime]="event.createdAt">{{
+                    event.createdAt | date: 'd MMM y, HH:mm:ss'
+                  }}</time>
+                </div>
+                <p class="timeline-location">{{ event.location }}</p>
+                @if (event.notes) {
+                  <p class="timeline-notes">{{ event.notes }}</p>
+                }
+              </div>
             </li>
           }
         </ol>
@@ -87,7 +100,7 @@ import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-
     }
   </section>`,
   styles: [
-    ':host{display:block;max-width:780px;margin:48px auto;padding:0 20px}.card{background:white;padding:32px;border-radius:0;box-shadow:none}form{display:block}.search-field{display:grid;gap:6px;min-width:0;font-size:13px}.search-controls{display:flex;align-items:stretch;gap:10px}.search-feedback{min-height:36px;display:grid;align-content:start}input{flex:1;min-width:0;height:46px;padding:12px;border:1px solid #d6e1e4;border-radius:0;font:inherit}.hint{color:#64777e;font-size:12px;letter-spacing:normal}.field-error{color:#b42318;font-size:12px;letter-spacing:normal}button{height:46px;padding:0 20px;background:#087e8b;color:white;border:0;border-radius:0;font-weight:700;white-space:nowrap}.eyebrow,small{color:#64777e;font-size:12px;letter-spacing:.08em}.row{display:flex;justify-content:space-between;align-items:center}.badge{background:#dff5f1;color:#087e8b;padding:8px 12px;border-radius:0;font-size:12px}.delivered-banner{display:flex;align-items:center;gap:16px;margin:20px 0;padding:18px 20px;background:#e7f5eb;border-left:8px solid #118043;color:#144d2a}.delivered-check{display:grid;place-items:center;width:52px;height:52px;flex:0 0 52px;background:#118043;color:#fff;font-size:34px;font-weight:900}.delivered-copy small{display:block;color:#14532d;letter-spacing:.12em;font-weight:700}.delivered-copy strong{display:block;margin:4px 0;font-size:26px;letter-spacing:.04em;line-height:1.05}.delivered-copy p{margin:3px 0 6px}.delivered-copy .delivery-date{font-size:13px;letter-spacing:normal}.error{color:#b42318}.result{margin-top:28px;border-top:1px solid #e5ecee;padding-top:20px}li{padding:12px 0;border-bottom:1px solid #edf1f2}li small{display:block;margin-top:4px}@media(max-width:520px){.delivered-banner{align-items:flex-start;padding:14px}.delivered-check{width:42px;height:42px;flex-basis:42px;font-size:28px}.delivered-copy strong{font-size:22px}.search-controls{gap:8px}button{padding:0 14px}}',
+    ':host{display:block;max-width:780px;margin:48px auto;padding:0 20px}.card{background:white;padding:32px;border-radius:0;box-shadow:none}form{display:block}.search-field{display:grid;gap:6px;min-width:0;font-size:13px}.search-controls{display:flex;align-items:stretch;gap:10px}.search-feedback{min-height:36px;display:grid;align-content:start}input{flex:1;min-width:0;height:46px;padding:12px;border:1px solid #d6e1e4;border-radius:0;font:inherit}.hint{color:#64777e;font-size:12px;letter-spacing:normal}.field-error{color:#b42318;font-size:12px;letter-spacing:normal}button{height:46px;padding:0 20px;background:#087e8b;color:white;border:0;border-radius:0;font-weight:700;white-space:nowrap}.eyebrow,small{color:#64777e;font-size:12px;letter-spacing:.08em}.row{display:flex;justify-content:space-between;align-items:center}.badge{background:#dff5f1;color:#087e8b;padding:8px 12px;border-radius:0;font-size:12px}.delivered-banner{display:flex;align-items:center;gap:16px;margin:20px 0;padding:18px 20px;background:#e7f5eb;border-left:8px solid #118043;color:#144d2a}.delivered-check{display:grid;place-items:center;width:52px;height:52px;flex:0 0 52px;background:#118043;color:#fff;font-size:34px;font-weight:900}.delivered-copy small{display:block;color:#14532d;letter-spacing:.12em;font-weight:700}.delivered-copy strong{display:block;margin:4px 0;font-size:26px;letter-spacing:.04em;line-height:1.05}.delivered-copy p{margin:3px 0 6px}.delivered-copy .delivery-date{font-size:13px;letter-spacing:normal}.error{color:#b42318}.result{margin-top:28px;border-top:1px solid #e5ecee;padding-top:20px}.timeline{list-style:none;margin:18px 0 0;padding:0}.timeline-item{display:grid;position:relative;grid-template-columns:20px minmax(0,1fr);column-gap:14px;padding:0 0 22px;border:0}.timeline-item:last-child{padding-bottom:0}.timeline-connector{position:absolute;z-index:0;top:20px;bottom:0;left:9px;width:2px;background:#cbd5d9}.timeline-item:last-child .timeline-connector{display:none}.timeline-dot{position:relative;z-index:1;display:block;width:20px;height:20px;border:3px solid #087e8b;border-radius:50%!important;background:#fff}.timeline-dot-latest{background:#087e8b;outline:4px solid #dff5f1}.timeline-event{min-width:0;padding:0 0 0 2px}.timeline-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap}.timeline-heading strong{font-size:14px}.timeline-heading time{color:#64777e;font-size:12px}.timeline-location{margin:5px 0 0;color:#45616a}.timeline-notes{margin:7px 0 0;color:#64777e;font-size:13px}@media(max-width:520px){.delivered-banner{align-items:flex-start;padding:14px}.delivered-check{width:42px;height:42px;flex-basis:42px;font-size:28px}.delivered-copy strong{font-size:22px}.search-controls{gap:8px}button{padding:0 14px}}',
   ],
 })
 export class TrackingComponent {
