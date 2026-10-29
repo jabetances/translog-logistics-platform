@@ -18,13 +18,26 @@ import { NotificationService } from '../core/notification.service';
         >Correo electrónico<input
           type="email"
           formControlName="email"
-          autocomplete="username"
-        /><small class="hint">Obligatorio · ejemplo: nombre@empresa.com.</small>
+          autocomplete="email"
+          maxlength="254"
+          (blur)="normalizeEmail()"
+          [attr.aria-invalid]="
+            form.controls.email.invalid &&
+            (form.controls.email.touched || form.controls.email.dirty)
+          "
+          aria-describedby="login-email-hint"
+        /><small id="login-email-hint" class="hint"
+          >Obligatorio · ejemplo: nombre@empresa.com.</small
+        >
         @if (form.controls.email.touched || form.controls.email.dirty) {
           @if (form.controls.email.hasError('required')) {
-            <small class="field-error">Escribe el correo electrónico.</small>
+            <small class="field-error" role="alert">Escribe el correo electrónico.</small>
           } @else if (form.controls.email.hasError('email')) {
-            <small class="field-error">Revisa el formato del correo.</small>
+            <small class="field-error" role="alert">Revisa el formato del correo.</small>
+          } @else if (form.controls.email.hasError('maxlength')) {
+            <small class="field-error" role="alert"
+              >El correo no puede superar 254 caracteres.</small
+            >
           }
         }
       </label>
@@ -36,6 +49,8 @@ import { NotificationService } from '../core/notification.service';
             [type]="showPassword() ? 'text' : 'password'"
             formControlName="password"
             autocomplete="current-password"
+            [attr.aria-invalid]="form.controls.password.invalid && form.controls.password.touched"
+            aria-describedby="login-password-hint"
           />
           <button
             type="button"
@@ -50,9 +65,11 @@ import { NotificationService } from '../core/notification.service';
             </svg>
           </button>
         </div>
-        <small class="hint">Obligatoria.</small>
+        <small id="login-password-hint" class="hint"
+          >Escribe la contraseña que usas para acceder.</small
+        >
         @if (form.controls.password.touched && form.controls.password.hasError('required')) {
-          <small class="field-error">Escribe la contraseña.</small>
+          <small class="field-error" role="alert">Escribe la contraseña.</small>
         }
       </div>
       @if (error()) {
@@ -177,11 +194,14 @@ export class LoginComponent {
   readonly error = signal('');
   readonly showPassword = signal(false);
   readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
     password: ['', Validators.required],
   });
   togglePasswordVisibility() {
     this.showPassword.update((visible) => !visible);
+  }
+  normalizeEmail() {
+    this.form.controls.email.setValue(this.form.controls.email.value.trim().toLowerCase());
   }
   submit() {
     if (this.form.invalid) {
@@ -190,14 +210,16 @@ export class LoginComponent {
     }
     this.loading.set(true);
     this.error.set('');
-    this.auth.login(this.form.getRawValue().email, this.form.getRawValue().password).subscribe({
-      next: () => this.router.navigateByUrl('/shipments'),
-      error: (e) => {
-        const message = e.error?.message ?? 'No se pudo iniciar sesión';
-        this.error.set(message);
-        this.notifications.showError(message);
-        this.loading.set(false);
-      },
-    });
+    this.auth
+      .login(this.form.getRawValue().email.trim().toLowerCase(), this.form.getRawValue().password)
+      .subscribe({
+        next: () => this.router.navigateByUrl('/shipments'),
+        error: (e) => {
+          const message = e.error?.message ?? 'No se pudo iniciar sesión';
+          this.error.set(message);
+          this.notifications.showError(message);
+          this.loading.set(false);
+        },
+      });
   }
 }

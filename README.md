@@ -4,40 +4,80 @@
 
 Monorepo para la prueba técnica: API NestJS + PostgreSQL y frontend Angular standalone con Angular Material.
 
-## Arranque rápido: 3 comandos
+## Arranque rápido: 3 pasos en PowerShell
 
-Necesitas Docker Engine y Docker Compose V2. Abre una terminal y ejecuta estas tres líneas, en orden:
+Necesitas Docker Desktop (o Docker Engine) con Docker Compose V2. En PowerShell, ejecuta estos pasos:
 
-```bash
+1. Clona el proyecto:
+
+```powershell
 git clone https://github.com/jabetances/translog-logistics-platform.git
-cd translog-logistics-platform && cp .env.example .env
+```
+2. Entra en la carpeta:
+
+```powershell
+Set-Location translog-logistics-platform
+```
+3. Construye e inicia todo con **un único comando**:
+
+```powershell
 docker compose up --build
 ```
 
-No hace falta cambiar el `.env` para esta prueba local.
+No hace falta crear ni copiar un `.env` para la prueba. Si quieres cambiar algún valor, antes de arrancar ejecuta `Copy-Item .env.example .env` en PowerShell y edita `.env`.
 
 Espera a que termine la compilación. Después abre:
 
 - Aplicación: `http://localhost:4200`
 - API (Swagger): `http://localhost:3000/api/docs`
 
-**Acceso de la primera instalación, con la base de datos vacía:**
+**Acceso inicial (base de datos nueva):**
 
 - Correo: `admin@example.test`
 - Contraseña temporal: `admin`
 
-Al entrar, TransLog te obliga a cambiarla por una contraseña de al menos 10 caracteres antes de usar la aplicación. El usuario predeterminado solo se crea si la base aún no tiene supervisores; si ya existe un volumen de datos, se conservan las cuentas anteriores.
+Al iniciar sesión, verás un aviso y tendrás que elegir una contraseña nueva: mínimo 12 caracteres, máximo 72 bytes UTF-8 y no puede ser una clave común o fácil. No se exigen símbolos ni combinaciones artificiales. El supervisor de demostración solo se crea cuando la base aún no tiene supervisores; un volumen existente conserva sus cuentas.
 
-> **Solo para probarlo en tu PC.** `admin/admin` es una credencial pública de demostración. No expongas la aplicación a Internet ni uses estos valores en producción. PostgreSQL solo está disponible dentro de la red de Compose; la web y la API se publican en localhost.
+> **Solo para probarlo en tu PC.** `admin/admin` es una credencial pública temporal. No expongas la aplicación a Internet ni uses los valores predeterminados en producción. PostgreSQL queda en la red interna de Compose y la web/API se publican solo en localhost.
 
-Para parar, pulsa `Ctrl+C` en esa terminal. Los datos se conservan; `docker compose down` también para los contenedores sin borrar el volumen.
+Si el backend informa `password authentication failed` después de haber usado otro `DB_PASSWORD`, el volumen puede conservar la contraseña de la instalación anterior. Para una prueba limpia en PowerShell, ejecuta estas dos líneas:
+
+```powershell
+docker compose down -v
+docker compose up --build
+```
+
+**`docker compose down -v` elimina todos los datos de esa base; no uses `-v` si quieres conservarlos.**
+
+Para parar, pulsa `Ctrl+C`. `docker compose down` detiene y elimina contenedores, pero conserva el volumen de datos.
 
 <details>
-<summary>Alternativa avanzada: ejecutar sin contenedores</summary>
+<summary>Desarrollo nativo sin contenedores (opcional)</summary>
 
-- Si PostgreSQL está instalado en Ubuntu: crea el usuario y la base con `sudo -u postgres createuser --pwprompt translog` y `sudo -u postgres createdb --owner=translog translog`. Pon la contraseña elegida en `DB_PASSWORD` de `backend/.env`.
-- En `backend/`, copia `.env.example` a `.env` y ajusta las variables para tu PostgreSQL local. Mantén `DB_SYNCHRONIZE=true` solo para desarrollo. Ejecuta `npm ci && npm run start:dev`.
-- En otra terminal, dentro de `frontend/`, ejecuta `npm ci && npm start`.
+Necesitas PostgreSQL local. Si aún no existe la base, en Ubuntu/WSL puedes crearla así:
+
+```bash
+sudo -u postgres createuser --pwprompt translog
+sudo -u postgres createdb --owner=translog translog
+```
+
+Copia `backend/.env.example` a `backend/.env` (PowerShell: `Copy-Item backend/.env.example backend/.env`; Bash: `cp backend/.env.example backend/.env`). Ajusta `DB_PASSWORD` al valor elegido para PostgreSQL; mantén `DB_SYNCHRONIZE=true` solo en desarrollo.
+
+En PowerShell, desde la raíz del proyecto, inicia cada servicio en su propia terminal:
+
+```powershell
+Set-Location backend
+npm ci
+npm run start:dev
+```
+
+En una segunda terminal:
+
+```powershell
+Set-Location frontend
+npm ci
+npm start
+```
 
 </details>
 
@@ -71,10 +111,20 @@ First Fit Decreasing (FFD) ordena los paquetes de mayor a menor peso y coloca ca
 
 ## Verificación
 
-- Backend: `cd backend && npm test && npm run build && npm run lint`.
-- HTTP e2e aislado (sin base de datos): `cd backend && npm run test:e2e`.
-- Frontend: `cd frontend && npm run build`.
-- Datos seed: el supervisor se crea al iniciar solo si se definen `BOOTSTRAP_SUPERVISOR_EMAIL` y `BOOTSTRAP_SUPERVISOR_PASSWORD` y aún no hay supervisor.
+Desde PowerShell, en la raíz del proyecto, ejecuta los comandos por bloques en sus carpetas:
+
+```powershell
+Set-Location backend
+npm test
+npm run lint
+npm run build
+npm run test:e2e
+Set-Location ..\frontend
+npm test
+npm run build
+```
+
+Las pruebas backend e2e no necesitan una base activa. La cuenta de demostración se crea solo si la base no contiene supervisores; el primer acceso obliga a cambiar su contraseña.
 
 ## Seguridad / límites
 

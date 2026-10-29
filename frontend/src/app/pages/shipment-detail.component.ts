@@ -7,6 +7,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ShipmentsService, Shipment, ShipmentStatus } from '../core/shipments.service';
 import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-status-labels';
 import { NotificationService } from '../core/notification.service';
+import { trimmedMinLength, trimmedRequired } from '../core/form-validators';
 @Component({
   selector: 'app-shipment-detail',
   standalone: true,
@@ -35,10 +36,20 @@ import { NotificationService } from '../core/notification.service';
             <p><b>Entregado</b><br />{{ item.deliveredAt | date: 'd MMM y, HH:mm:ss' }}</p>
           }
         </div>
-        @if (item.status !== 'DELIVERED' && item.status !== 'CANCELLED') {
+        @if (
+          item.status !== 'DELIVERED' &&
+          item.status !== 'CANCELLED' &&
+          (item.allowedTransitions?.length ?? 0) > 0
+        ) {
           <form class="update" [formGroup]="form" (ngSubmit)="update()">
             <h2>Actualizar estado</h2>
-            <select formControlName="status">
+            <label class="field" for="shipment-next-status">Nuevo estado</label>
+            <select
+              id="shipment-next-status"
+              formControlName="status"
+              aria-label="Nuevo estado del envío"
+              [attr.aria-invalid]="form.controls.status.invalid && form.controls.status.touched"
+            >
               @for (s of item.allowedTransitions ?? []; track s) {
                 <option [value]="s">{{ statusLabel(s) }}</option>
               }</select
@@ -48,14 +59,21 @@ import { NotificationService } from '../core/notification.service';
                 placeholder="Ej.: Almacén central"
                 minlength="2"
                 maxlength="200"
-              /><small class="hint">Obligatoria · 2–200 caracteres.</small>
+                [attr.aria-invalid]="
+                  form.controls.location.invalid &&
+                  (form.controls.location.touched || form.controls.location.dirty)
+                "
+                aria-describedby="location-hint"
+              /><small id="location-hint" class="hint">Obligatoria · 2–200 caracteres.</small>
               @if (form.controls.location.touched || form.controls.location.dirty) {
                 @if (form.controls.location.hasError('required')) {
-                  <small class="field-error">Indica dónde se encuentra el envío.</small>
+                  <small class="field-error" role="alert"
+                    >Indica dónde se encuentra el envío.</small
+                  >
                 } @else if (form.controls.location.hasError('minlength')) {
-                  <small class="field-error">Debe tener al menos 2 caracteres.</small>
+                  <small class="field-error" role="alert">Debe tener al menos 2 caracteres.</small>
                 } @else if (form.controls.location.hasError('maxlength')) {
-                  <small class="field-error">No puede superar 200 caracteres.</small>
+                  <small class="field-error" role="alert">No puede superar 200 caracteres.</small>
                 }
               }</label
             ><label class="field"
@@ -63,11 +81,18 @@ import { NotificationService } from '../core/notification.service';
                 formControlName="notes"
                 maxlength="2000"
                 rows="2"
+                [attr.aria-invalid]="
+                  form.controls.notes.invalid &&
+                  (form.controls.notes.touched || form.controls.notes.dirty)
+                "
+                aria-describedby="notes-hint"
                 placeholder="Añade información adicional si hace falta"
               ></textarea
-              ><small class="hint">Opcionales · máximo 2000 caracteres.</small>
+              ><small id="notes-hint" class="hint">Opcionales · máximo 2000 caracteres.</small>
               @if (form.controls.notes.touched && form.controls.notes.hasError('maxlength')) {
-                <small class="field-error">Has superado el límite de 2000 caracteres.</small>
+                <small class="field-error" role="alert"
+                  >Has superado el límite de 2000 caracteres.</small
+                >
               }</label
             ><button mat-flat-button color="primary" [disabled]="form.invalid || busy()">
               Guardar cambio</button
@@ -81,9 +106,11 @@ import { NotificationService } from '../core/notification.service';
               Cancelar envío
             </button>
           </form>
+        } @else if (item.status !== 'DELIVERED' && item.status !== 'CANCELLED') {
+          <p role="status">No hay más cambios de estado disponibles para este envío.</p>
         }
         @if (error()) {
-          <p class="error">{{ error() }}</p>
+          <p class="error" role="alert">{{ error() }}</p>
         }
         <h2>Historial</h2>
         <ol class="timeline">
@@ -125,7 +152,10 @@ export class ShipmentDetailComponent {
   ];
   readonly form = this.fb.nonNullable.group({
     status: ['IN_WAREHOUSE' as ShipmentStatus, Validators.required],
-    location: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(200)]],
+    location: [
+      '',
+      [Validators.required, trimmedRequired, trimmedMinLength(2), Validators.maxLength(200)],
+    ],
     notes: ['', [Validators.maxLength(2000)]],
   });
   constructor() {
@@ -146,31 +176,43 @@ export class ShipmentDetailComponent {
     });
   }
   update() {
-    if (this.form.invalid) return;
+    if (this.busy()) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    const values = this.form.getRawValue();
+    const payload = {
+      ...values,
+      location: values.location.trim(),
+      notes: values.notes.trim() || undefined,
+    };
     this.busy.set(true);
-    this.api
-      .changeStatus(this.route.snapshot.paramMap.get('id')!, this.form.getRawValue())
-      .subscribe({
-        next: () => {
-          this.busy.set(false);
-          this.load();
-        },
-        error: (e) => {
-          const message = e.error?.message ?? 'Transición no válida';
-          this.error.set(message);
-          this.notifications.showError(message);
-          this.busy.set(false);
-        },
-      });
+    this.error.set('');
+    this.api.changeStatus(this.route.snapshot.paramMap.get('id')!, payload).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.notifications.showSuccess('Estado actualizado.');
+        this.load();
+      },
+      error: (e) => {
+        const message = e.error?.message ?? 'Transición no válida';
+        this.error.set(message);
+        this.notifications.showError(message);
+        this.busy.set(false);
+      },
+    });
   }
   cancel() {
     const current = this.shipment();
     if (!current || this.busy()) return;
+    if (!window.confirm('¿Cancelar este envío? La cancelación es definitiva.')) return;
     this.busy.set(true);
     this.error.set('');
     this.api.cancel(current.id).subscribe({
       next: () => {
         this.busy.set(false);
+        this.notifications.showSuccess('Envío cancelado.');
         this.load();
       },
       error: (e) => {

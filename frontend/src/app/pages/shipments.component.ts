@@ -22,12 +22,14 @@ import {
 } from '../core/shipments.service';
 import { shipmentStatusBadgeClass, shipmentStatusLabel } from '../core/shipment-status-labels';
 import { NotificationService } from '../core/notification.service';
+import { trimmedMinLength, trimmedRequired } from '../core/form-validators';
 
-const optionalPhoneLengthValidator: ValidatorFn = (control: AbstractControl) => {
+const optionalPhoneValidator: ValidatorFn = (control: AbstractControl) => {
   const value = String(control.value ?? '').trim();
-  return value.length === 0 || (value.length >= 5 && value.length <= 40)
-    ? null
-    : { phoneLength: true };
+  if (!value) return null;
+  if (!/^\+?[0-9\s().-]+$/.test(value) || value.length > 40) return { phoneFormat: true };
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 15 ? null : { phoneFormat: true };
 };
 const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
   if (control.value === null || control.value === '') return null;
@@ -64,10 +66,17 @@ const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
         <h2>Registrar envío</h2>
         <div class="grid">
           <label
-            >Origen<input formControlName="originAddress" minlength="3" maxlength="240" /><small
-              class="hint"
-              >Obligatorio · 3–240 caracteres.</small
-            >
+            >Origen<input
+              id="shipment-origin"
+              formControlName="originAddress"
+              minlength="3"
+              maxlength="240"
+              [attr.aria-invalid]="
+                form.controls.originAddress.invalid &&
+                (form.controls.originAddress.touched || form.controls.originAddress.dirty)
+              "
+              aria-describedby="shipment-origin-hint"
+            /><small id="shipment-origin-hint" class="hint">Obligatorio · 3–240 caracteres.</small>
             @if (form.controls.originAddress.touched || form.controls.originAddress.dirty) {
               @if (form.controls.originAddress.hasError('required')) {
                 <small class="field-error">Escribe la dirección de origen.</small>
@@ -79,10 +88,18 @@ const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
             }</label
           ><label
             >Destino<input
+              id="shipment-destination"
               formControlName="destinationAddress"
               minlength="3"
               maxlength="240"
-            /><small class="hint">Obligatorio · 3–240 caracteres.</small>
+              [attr.aria-invalid]="
+                form.controls.destinationAddress.invalid &&
+                (form.controls.destinationAddress.touched || form.controls.destinationAddress.dirty)
+              "
+              aria-describedby="shipment-destination-hint"
+            /><small id="shipment-destination-hint" class="hint"
+              >Obligatorio · 3–240 caracteres.</small
+            >
             @if (
               form.controls.destinationAddress.touched || form.controls.destinationAddress.dirty
             ) {
@@ -96,10 +113,18 @@ const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
             }</label
           ><label
             >Destinatario<input
+              id="shipment-recipient"
               formControlName="recipientName"
               minlength="2"
               maxlength="160"
-            /><small class="hint">Obligatorio · 2–160 caracteres.</small>
+              [attr.aria-invalid]="
+                form.controls.recipientName.invalid &&
+                (form.controls.recipientName.touched || form.controls.recipientName.dirty)
+              "
+              aria-describedby="shipment-recipient-hint"
+            /><small id="shipment-recipient-hint" class="hint"
+              >Obligatorio · 2–160 caracteres.</small
+            >
             @if (form.controls.recipientName.touched || form.controls.recipientName.dirty) {
               @if (form.controls.recipientName.hasError('required')) {
                 <small class="field-error">Escribe el nombre del destinatario.</small>
@@ -110,27 +135,47 @@ const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
               }
             }</label
           ><label
-            >Teléfono (opcional)<input formControlName="contactPhone" maxlength="40" /><small
-              class="hint"
-              >Opcional · si lo rellenas, 5–40 caracteres. En blanco se acepta.</small
+            >Teléfono (opcional)<input
+              id="shipment-phone"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel"
+              formControlName="contactPhone"
+              maxlength="40"
+              [attr.aria-invalid]="
+                form.controls.contactPhone.invalid &&
+                (form.controls.contactPhone.touched || form.controls.contactPhone.dirty)
+              "
+              aria-describedby="shipment-phone-hint"
+            /><small id="shipment-phone-hint" class="hint"
+              >Opcional · 7–15 cifras; admite +, espacios, paréntesis y guiones.</small
             >
             @if (
               (form.controls.contactPhone.touched || form.controls.contactPhone.dirty) &&
-              form.controls.contactPhone.hasError('phoneLength')
+              form.controls.contactPhone.hasError('phoneFormat')
             ) {
-              <small class="field-error"
-                >Debe tener entre 5 y 40 caracteres; ahora tiene
-                {{ form.controls.contactPhone.value.trim().length }}.</small
+              <small class="field-error" role="alert"
+                >Revisa el teléfono: debe llevar 7–15 cifras y solo usar +, espacios, paréntesis o
+                guiones.</small
               >
             }</label
           ><label
             >Peso (kg)<input
+              id="shipment-weight"
               type="number"
+              inputmode="decimal"
               min="0.001"
               max="100000"
               step="0.001"
               formControlName="weightKg"
-            /><small class="hint">Obligatorio · 0,001–100.000 kg; máximo 3 decimales.</small>
+              [attr.aria-invalid]="
+                form.controls.weightKg.invalid &&
+                (form.controls.weightKg.touched || form.controls.weightKg.dirty)
+              "
+              aria-describedby="shipment-weight-hint"
+            /><small id="shipment-weight-hint" class="hint"
+              >Obligatorio · 0,001–100.000 kg; máximo 3 decimales.</small
+            >
             @if (form.controls.weightKg.touched || form.controls.weightKg.dirty) {
               @if (form.controls.weightKg.hasError('required')) {
                 <small class="field-error">Introduce el peso del paquete.</small>
@@ -148,7 +193,7 @@ const maxThreeDecimalsValidator: ValidatorFn = (control: AbstractControl) => {
           Crear envío
         </button>
         @if (error()) {
-          <p class="error">{{ error() }}</p>
+          <p class="error" role="alert">{{ error() }}</p>
         }
       </form>
     }
@@ -309,10 +354,19 @@ export class ShipmentsComponent {
     'CANCELLED',
   ];
   readonly form = this.fb.nonNullable.group({
-    originAddress: ['', [Validators.required, Validators.minLength(3)]],
-    destinationAddress: ['', [Validators.required, Validators.minLength(3)]],
-    recipientName: ['', [Validators.required, Validators.minLength(2)]],
-    contactPhone: ['', optionalPhoneLengthValidator],
+    originAddress: [
+      '',
+      [Validators.required, trimmedRequired, trimmedMinLength(3), Validators.maxLength(240)],
+    ],
+    destinationAddress: [
+      '',
+      [Validators.required, trimmedRequired, trimmedMinLength(3), Validators.maxLength(240)],
+    ],
+    recipientName: [
+      '',
+      [Validators.required, trimmedRequired, trimmedMinLength(2), Validators.maxLength(160)],
+    ],
+    contactPhone: ['', optionalPhoneValidator],
     weightKg: [
       1,
       [
@@ -405,10 +459,21 @@ export class ShipmentsComponent {
     this.load(1);
   }
   create() {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    const values = this.form.getRawValue();
+    const payload = {
+      originAddress: values.originAddress.trim(),
+      destinationAddress: values.destinationAddress.trim(),
+      recipientName: values.recipientName.trim(),
+      contactPhone: values.contactPhone.trim() || undefined,
+      weightKg: values.weightKg,
+    };
     this.busy.set(true);
     this.error.set('');
-    this.api.create(this.form.getRawValue()).subscribe({
+    this.api.create(payload).subscribe({
       next: (shipment) => {
         this.showForm.set(false);
         this.form.reset({

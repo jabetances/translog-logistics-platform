@@ -51,6 +51,10 @@ function spanishMessage(
       return field + ' tiene un valor no permitido.';
     case 'isEmail':
       return field + ' debe tener un formato de correo válido.';
+    case 'isAcceptablePassword':
+      return 'La contraseña debe tener al menos 12 caracteres, no superar 72 bytes UTF-8 y evitar claves comunes o secuencias fáciles.';
+    case 'isContactPhone':
+      return 'El teléfono debe incluir entre 7 y 15 cifras; puedes usar +, espacios, paréntesis o guiones.';
     case 'isNumber':
       return field + ' debe ser un número válido.';
     case 'isEnum':

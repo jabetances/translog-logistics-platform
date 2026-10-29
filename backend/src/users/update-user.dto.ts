@@ -8,6 +8,7 @@ import {
   Length,
   MaxLength,
 } from 'class-validator';
+import { IsAcceptablePassword } from '../auth/password-policy.js';
 import { UserRole } from './user.entity.js';
 
 export class UpdateUserDto {
@@ -28,15 +29,17 @@ export class UpdateUserDto {
   email?: string;
 
   @ApiPropertyOptional({
-    example: '••••••••••',
-    minLength: 10,
-    maxLength: 100,
+    example: '••••••••••••',
+    minLength: 12,
+    maxLength: 72,
+    description:
+      'Frase única de al menos 12 caracteres, máximo 72 bytes UTF-8; sin requisitos artificiales de símbolos.',
     writeOnly: true,
   })
   @Transform(({ value }) => (value === null ? undefined : value))
   @IsOptional()
   @IsString()
-  @Length(10, 100)
+  @IsAcceptablePassword()
   password?: string;
 
   @ApiPropertyOptional({

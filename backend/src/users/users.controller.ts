@@ -15,7 +15,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { hash } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
@@ -87,9 +87,19 @@ export class UsersController {
         role: true,
         createdAt: true,
         mustChangePassword: true,
+        ...(password !== undefined ? { passwordHash: true } : {}),
       },
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
+    if (
+      password !== undefined &&
+      user.passwordHash &&
+      (await compare(password, user.passwordHash))
+    ) {
+      throw new BadRequestException(
+        'La contraseña nueva debe ser distinta de la actual.',
+      );
+    }
 
     if (dto.email && dto.email !== user.email) {
       const duplicate = await this.users.findOne({

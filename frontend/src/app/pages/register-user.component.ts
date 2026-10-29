@@ -1,10 +1,26 @@
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { NotificationService } from '../core/notification.service';
+import { trimmedMinLength, trimmedRequired } from '../core/form-validators';
+import { passwordPolicyError, passwordRules } from '../core/password-policy';
+
+const acceptablePassword: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const value = typeof control.value === 'string' ? control.value : '';
+  if (!value) return null;
+  const message = passwordPolicyError(value);
+  return message ? { passwordPolicy: message } : null;
+};
 
 @Component({
   selector: 'app-register-user',
@@ -31,21 +47,61 @@ import { NotificationService } from '../core/notification.service';
       <p>Cargando usuario…</p>
     } @else {
       <form [formGroup]="form" (ngSubmit)="submit()">
-        <label
-          >Nombre completo<input
+        <div class="field">
+          <label for="user-full-name">Nombre completo</label>
+          <input
+            id="user-full-name"
             formControlName="fullName"
             autocomplete="name"
             maxlength="120"
             [readonly]="passwordChangeRequired()"
-        /></label>
-        <label
-          >Correo<input
+            (blur)="trimFullName()"
+            [attr.aria-invalid]="
+              form.controls.fullName.invalid &&
+              (form.controls.fullName.touched || form.controls.fullName.dirty)
+            "
+            aria-describedby="user-full-name-hint"
+          />
+          <small id="user-full-name-hint" class="hint">Obligatorio · 2–120 caracteres.</small>
+          @if (form.controls.fullName.touched || form.controls.fullName.dirty) {
+            @if (form.controls.fullName.hasError('required')) {
+              <small class="field-error" role="alert">Escribe el nombre completo.</small>
+            } @else if (form.controls.fullName.hasError('minlength')) {
+              <small class="field-error" role="alert">Debe tener al menos 2 caracteres.</small>
+            } @else if (form.controls.fullName.hasError('maxlength')) {
+              <small class="field-error" role="alert">No puede superar 120 caracteres.</small>
+            }
+          }
+        </div>
+        <div class="field">
+          <label for="user-email">Correo electrónico</label>
+          <input
+            id="user-email"
             type="email"
             formControlName="email"
-            autocomplete="username"
+            autocomplete="email"
             maxlength="254"
             [readonly]="passwordChangeRequired()"
-        /></label>
+            (blur)="normalizeEmail()"
+            [attr.aria-invalid]="
+              form.controls.email.invalid &&
+              (form.controls.email.touched || form.controls.email.dirty)
+            "
+            aria-describedby="user-email-hint"
+          />
+          <small id="user-email-hint" class="hint"
+            >Obligatorio · ejemplo: nombre@empresa.com.</small
+          >
+          @if (form.controls.email.touched || form.controls.email.dirty) {
+            @if (form.controls.email.hasError('required')) {
+              <small class="field-error" role="alert">Escribe el correo electrónico.</small>
+            } @else if (form.controls.email.hasError('email')) {
+              <small class="field-error" role="alert">Revisa el formato del correo.</small>
+            } @else if (form.controls.email.hasError('maxlength')) {
+              <small class="field-error" role="alert">No puede superar 254 caracteres.</small>
+            }
+          }
+        </div>
         @if (editing && !changePassword()) {
           <button type="button" class="secondary" (click)="beginPasswordChange()">
             Cambiar contraseña
@@ -60,8 +116,13 @@ import { NotificationService } from '../core/notification.service';
                 [type]="showPassword() ? 'text' : 'password'"
                 formControlName="password"
                 autocomplete="new-password"
-                minlength="10"
-                maxlength="100"
+                minlength="12"
+                maxlength="72"
+                [attr.aria-invalid]="
+                  form.controls.password.invalid &&
+                  (form.controls.password.touched || form.controls.password.dirty)
+                "
+                aria-describedby="password-guidance password-policy-rules"
               />
               <button
                 type="button"
@@ -76,11 +137,29 @@ import { NotificationService } from '../core/notification.service';
                 </svg>
               </button>
             </div>
-            <small class="hint">{{
-              editing
-                ? 'Escribe la nueva contraseña y confírmala; debe tener 10–100 caracteres.'
-                : 'Obligatoria · 10–100 caracteres.'
-            }}</small>
+            <small id="password-guidance" class="hint">
+              Elige una frase larga y exclusiva. No hace falta añadir símbolos por obligación ni
+              reutilizar la anterior.
+            </small>
+            <ul
+              id="password-policy-rules"
+              class="password-rules"
+              aria-label="Requisitos de la contraseña"
+            >
+              @for (rule of passwordRequirements(); track rule.id) {
+                <li [class.met]="rule.valid">
+                  <span aria-hidden="true">{{ rule.valid ? '✓' : '○' }}</span
+                  >{{ rule.label }}
+                </li>
+              }
+            </ul>
+            @if (form.controls.password.touched || form.controls.password.dirty) {
+              @if (form.controls.password.hasError('required')) {
+                <small class="field-error" role="alert">Escribe una contraseña nueva.</small>
+              } @else if (passwordError()) {
+                <small class="field-error" role="alert">{{ passwordError() }}</small>
+              }
+            }
           </div>
           <div class="password-field">
             <label for="account-confirm-password">Confirmar contraseña</label>
@@ -90,8 +169,13 @@ import { NotificationService } from '../core/notification.service';
                 [type]="showConfirmPassword() ? 'text' : 'password'"
                 formControlName="confirmPassword"
                 autocomplete="new-password"
-                minlength="10"
-                maxlength="100"
+                minlength="12"
+                maxlength="72"
+                [attr.aria-invalid]="
+                  form.controls.confirmPassword.invalid &&
+                  (form.controls.confirmPassword.touched || form.controls.confirmPassword.dirty)
+                "
+                aria-describedby="confirm-password-hint"
               />
               <button
                 type="button"
@@ -108,14 +192,19 @@ import { NotificationService } from '../core/notification.service';
                 </svg>
               </button>
             </div>
-            @if (
-              (form.controls.password.touched ||
-                form.controls.password.dirty ||
-                form.controls.confirmPassword.touched ||
-                form.controls.confirmPassword.dirty) &&
-              passwordsMismatch()
-            ) {
-              <small class="field-error">Las contraseñas no coinciden.</small>
+            <small id="confirm-password-hint" class="hint"
+              >Vuelve a escribir exactamente la contraseña nueva.</small
+            >
+            @if (form.controls.confirmPassword.touched || form.controls.confirmPassword.dirty) {
+              @if (form.controls.confirmPassword.hasError('required')) {
+                <small id="confirm-password-error" class="field-error" role="alert">
+                  Confirma la contraseña.
+                </small>
+              } @else if (form.controls.confirmPassword.hasError('maxlength')) {
+                <small class="field-error" role="alert">No superes 72 caracteres.</small>
+              } @else if (passwordsMismatch()) {
+                <small class="field-error" role="alert">Las contraseñas no coinciden.</small>
+              }
             }
           </div>
         }
@@ -167,7 +256,7 @@ import { NotificationService } from '../core/notification.service';
     }
   </section>`,
   styles: [
-    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;font:inherit}.hint{color:#64777e;font-size:12px}.password-field{display:grid;gap:6px}.password-control{position:relative;display:flex;align-items:center}.password-control input{width:100%;padding-right:46px}.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:transparent;color:#64777e;cursor:pointer}.password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.password-toggle:focus-visible{outline:2px solid #087e8b;outline-offset:1px}.password-warning{margin:0;padding:12px 14px;background:#fff0f0;border:1px solid #b42318;color:#b42318;font-weight:700}.field-error,.error{color:#b42318}.success{color:#087e8b}.buttons{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:white;color:#18313a;border:1px solid #d6e1e4;padding:11px;font:inherit;cursor:pointer}.secondary:disabled{opacity:.55;cursor:not-allowed}button[mat-flat-button]{background:#087e8b;color:white;padding:11px;border:0;font-weight:700}',
+    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px}form{display:grid;gap:14px}.field,label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;font:inherit}.field input[aria-invalid="true"],.password-control input[aria-invalid="true"]{border-color:#b42318}.hint{color:#64777e;font-size:12px}.password-rules{display:grid;gap:5px;margin:0;padding:0;list-style:none;color:#64777e;font-size:12px}.password-rules li{display:flex;gap:7px;align-items:flex-start}.password-rules li.met{color:#087e8b;font-weight:600}.password-rules li span{width:14px;flex:0 0 14px}.password-field{display:grid;gap:6px}.password-control{position:relative;display:flex;align-items:center}.password-control input{width:100%;padding-right:46px}.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:transparent;color:#64777e;cursor:pointer}.password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.password-toggle:focus-visible{outline:2px solid #087e8b;outline-offset:1px}.password-warning{margin:0;padding:12px 14px;background:#fff0f0;border:1px solid #b42318;color:#b42318;font-weight:700}.field-error,.error{color:#b42318}.success{color:#087e8b}.buttons{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:white;color:#18313a;border:1px solid #d6e1e4;padding:11px;font:inherit;cursor:pointer}.secondary:disabled{opacity:.55;cursor:not-allowed}button[mat-flat-button]{background:#087e8b;color:white;padding:11px;border:0;font-weight:700}',
   ],
 })
 export class RegisterUserComponent {
@@ -188,10 +277,13 @@ export class RegisterUserComponent {
   readonly editing = !!this.id;
   ownAccount = false;
   readonly form = this.fb.nonNullable.group({
-    fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
+    fullName: [
+      '',
+      [Validators.required, trimmedRequired, trimmedMinLength(2), Validators.maxLength(120)],
+    ],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
-    password: ['', [Validators.minLength(10), Validators.maxLength(100)]],
-    confirmPassword: ['', [Validators.minLength(10), Validators.maxLength(100)]],
+    password: ['', [acceptablePassword]],
+    confirmPassword: ['', [Validators.maxLength(72)]],
     role: ['OPERATOR' as 'OPERATOR' | 'SUPERVISOR', Validators.required],
   });
   constructor() {
@@ -237,6 +329,19 @@ export class RegisterUserComponent {
       });
     }
   }
+  passwordRequirements() {
+    return passwordRules(this.form.controls.password.value);
+  }
+  passwordError() {
+    const value = this.form.controls.password.value;
+    return value ? passwordPolicyError(value) : null;
+  }
+  trimFullName() {
+    this.form.controls.fullName.setValue(this.form.controls.fullName.value.trim());
+  }
+  normalizeEmail() {
+    this.form.controls.email.setValue(this.form.controls.email.value.trim().toLowerCase());
+  }
   passwordsMismatch() {
     const { password, confirmPassword } = this.form.getRawValue();
     return password !== confirmPassword;
@@ -249,13 +354,21 @@ export class RegisterUserComponent {
   }
   beginPasswordChange() {
     this.error.set('');
+    this.form.controls.password.addValidators(Validators.required);
+    this.form.controls.confirmPassword.addValidators(Validators.required);
+    this.form.controls.password.updateValueAndValidity();
+    this.form.controls.confirmPassword.updateValueAndValidity();
     this.showPassword.set(false);
     this.showConfirmPassword.set(false);
     this.changePassword.set(true);
   }
   cancelPasswordChange() {
+    this.form.controls.password.removeValidators(Validators.required);
+    this.form.controls.confirmPassword.removeValidators(Validators.required);
     this.form.controls.password.reset('');
     this.form.controls.confirmPassword.reset('');
+    this.form.controls.password.updateValueAndValidity();
+    this.form.controls.confirmPassword.updateValueAndValidity();
     this.showPassword.set(false);
     this.showConfirmPassword.set(false);
     this.changePassword.set(false);
@@ -268,7 +381,7 @@ export class RegisterUserComponent {
     const hasPassword = !!v.password || !!v.confirmPassword;
     if (this.form.invalid || this.passwordsMismatch() || (!this.editing && !hasPassword)) {
       this.form.markAllAsTouched();
-      this.error.set('Revisa los datos y confirma la contraseña.');
+      this.error.set('Revisa los campos marcados antes de guardar.');
       return;
     }
     if (
@@ -298,7 +411,7 @@ export class RegisterUserComponent {
         email: string;
         role?: 'OPERATOR' | 'SUPERVISOR';
         password?: string;
-      } = { fullName: v.fullName, email: v.email };
+      } = { fullName: v.fullName.trim(), email: v.email.trim().toLowerCase() };
       if (!this.ownAccount) payload.role = v.role;
       if (v.password) payload.password = v.password;
       this.auth.updateUser(this.id!, payload).subscribe({
@@ -312,7 +425,12 @@ export class RegisterUserComponent {
       });
     } else
       this.auth
-        .register({ fullName: v.fullName, email: v.email, role: v.role, password: v.password })
+        .register({
+          fullName: v.fullName.trim(),
+          email: v.email.trim().toLowerCase(),
+          role: v.role,
+          password: v.password,
+        })
         .subscribe({
           next: () => {
             this.done.set(true);

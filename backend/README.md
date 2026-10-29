@@ -1,50 +1,56 @@
 # API de TransLog
 
-Servicio de seguimiento de envíos desarrollado con NestJS, TypeORM y PostgreSQL. La descripción general del sistema, sus rutas y el modelo de datos está en el [README principal](../README.md).
+API de seguimiento de envíos desarrollada con NestJS, TypeORM y PostgreSQL. La guía completa de ejecución y el modelo del sistema están en el [README principal](../README.md).
 
-## Requisitos
+## Ejecutar la entrega con Docker
 
-- Node.js y npm (consulta la versión fijada en el proyecto si necesitas reproducir el entorno).
-- PostgreSQL local, o Docker para levantar la base de datos.
+Desde la raíz del repositorio, basta con:
 
-## Configuración local
+```powershell
+docker compose up --build
+```
 
-Desde esta carpeta, crea tu archivo de variables de entorno y completa los secretos:
+No hace falta crear un `.env`: Compose aplica valores de demostración locales. La primera cuenta, en una base sin supervisores, es `admin@example.test` / `admin`; el primer acceso exige cambiarla por una frase única de al menos 12 caracteres. Se rechazan claves comunes y contraseñas de más de 72 bytes UTF-8; no se fuerzan símbolos ni mayúsculas.
+
+## Desarrollo nativo (opcional)
+
+Necesitas Node.js, npm y PostgreSQL. Desde esta carpeta, copia la plantilla de entorno:
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Bash (Linux, macOS o WSL):
 
 ```bash
 cp .env.example .env
 ```
 
-Configura al menos `DB_PASSWORD`, `JWT_SECRET` y las variables `BOOTSTRAP_SUPERVISOR_*`. Para PostgreSQL instalado en Ubuntu, puedes crear el usuario y la base así:
+Ajusta `DB_PASSWORD` a la contraseña del usuario de PostgreSQL si no usas el valor local de la plantilla. Mantén `DB_HOST=localhost` y `DB_SYNCHRONIZE=true` solo para desarrollo. Si PostgreSQL ya está instalado en Ubuntu, puedes crear el usuario y la base así:
 
 ```bash
 sudo -u postgres createuser --pwprompt translog
 sudo -u postgres createdb --owner=translog translog
 ```
 
-Pon en `DB_PASSWORD` la contraseña que hayas elegido. Para esta configuración local, usa `DB_HOST=localhost`. También puedes iniciar únicamente PostgreSQL con `docker compose up -d postgres` desde la raíz del repositorio y mantener `DB_HOST=localhost`.
-
-Instala dependencias e inicia el servidor en modo de desarrollo:
+Instala y arranca la API desde esta carpeta:
 
 ```bash
 npm ci
 npm run start:dev
 ```
 
-La API queda disponible en el puerto configurado; en el arranque rápido habitual, Swagger está en `http://localhost:3000/api/docs`.
+Swagger está en `http://localhost:3000/api/docs` con la configuración local habitual.
 
-## Comandos habituales
+## Comandos y pruebas
 
 ```bash
-npm run build       # Compilar
-npm run start       # Iniciar
-npm run start:dev   # Iniciar y recargar al cambiar archivos
-npm run start:prod  # Iniciar la versión compilada
-npm test            # Ejecutar pruebas unitarias
-npm run test:e2e    # Ejecutar pruebas de extremo a extremo
-npm run lint        # Revisar el código
+npm run build
+npm run lint
+npm test
+npm run test:e2e
 ```
 
-## Base de datos y seguridad
-
-`DB_SYNCHRONIZE=true` se utiliza únicamente en desarrollo local. En producción, desactívalo y gestiona los cambios del esquema mediante migraciones. No publiques archivos `.env` ni uses secretos de ejemplo en un entorno accesible desde Internet.
+Las pruebas e2e son HTTP aisladas y no necesitan una base activa. En producción, desactiva `DB_SYNCHRONIZE` y aplica migraciones. Nunca publiques un archivo `.env` ni uses los valores de demostración fuera de un entorno local.

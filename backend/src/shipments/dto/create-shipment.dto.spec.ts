@@ -14,6 +14,18 @@ const validShipment = (contactPhone: string) =>
   });
 
 describe('CreateShipmentDto', () => {
+  it('rechaza direcciones que solo contienen espacios', () => {
+    const dto = plainToInstance(CreateShipmentDto, {
+      originAddress: '   ',
+      destinationAddress: 'Avenida Sol',
+      recipientName: 'Ana Pérez',
+      weightKg: 1.25,
+    });
+    expect(dto.originAddress).toBe('');
+    expect(
+      validateSync(dto).some((error) => error.property === 'originAddress'),
+    ).toBe(true);
+  });
   it.each(['', '   '])(
     'acepta el teléfono opcional vacío (%j)',
     (contactPhone) => {
@@ -23,14 +35,23 @@ describe('CreateShipmentDto', () => {
     },
   );
 
-  it('sigue rechazando un teléfono no vacío demasiado corto', () => {
-    const errors = validateSync(validShipment('1234'));
-    expect(errors.some((error) => error.property === 'contactPhone')).toBe(
-      true,
-    );
-    const response = validationExceptionFactory(errors).getResponse();
-    expect(JSON.stringify(response)).toContain(
-      'El teléfono de contacto debe tener al menos 5 caracteres.',
-    );
+  it('acepta teléfonos formateados con un número razonable de cifras', () => {
+    const dto = validShipment(' +34 (600) 123-456 ');
+    expect(dto.contactPhone).toBe('+34 (600) 123-456');
+    expect(validateSync(dto)).toHaveLength(0);
   });
+
+  it.each(['1234', 'abcdefgh', '+34 600 ABC 123', '1234567890123456'])(
+    'rechaza teléfonos que no parecen utilizables (%j)',
+    (contactPhone) => {
+      const errors = validateSync(validShipment(contactPhone));
+      expect(errors.some((error) => error.property === 'contactPhone')).toBe(
+        true,
+      );
+      const response = validationExceptionFactory(errors).getResponse();
+      expect(JSON.stringify(response)).toContain(
+        'El teléfono debe incluir entre 7 y 15 cifras',
+      );
+    },
+  );
 });

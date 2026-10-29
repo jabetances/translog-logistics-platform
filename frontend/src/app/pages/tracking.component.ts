@@ -25,8 +25,17 @@ import { NotificationService } from '../core/notification.service';
             aria-label="Código de seguimiento"
             minlength="17"
             maxlength="17"
-          /><button mat-flat-button color="primary" [disabled]="form.invalid || loading()">
-            Buscar
+            [attr.aria-invalid]="
+              form.controls.code.invalid && (form.controls.code.touched || form.controls.code.dirty)
+            "
+            aria-describedby="tracking-code-help"
+          /><button
+            mat-flat-button
+            color="primary"
+            [disabled]="form.invalid || loading()"
+            [attr.aria-busy]="loading()"
+          >
+            {{ loading() ? 'Buscando…' : 'Buscar' }}
           </button>
         </div>
         <div class="search-feedback" aria-live="polite">
@@ -34,18 +43,22 @@ import { NotificationService } from '../core/notification.service';
             (form.controls.code.touched || form.controls.code.dirty) && form.controls.code.invalid
           ) {
             @if (form.controls.code.hasError('required')) {
-              <small class="field-error">Introduce el código de seguimiento.</small>
+              <small class="field-error" role="alert">Introduce el código de seguimiento.</small>
             } @else if (form.controls.code.hasError('pattern')) {
-              <small class="field-error">Formato incorrecto; ejemplo: ENV-20261028-AB12.</small>
+              <small class="field-error" role="alert"
+                >Formato incorrecto; ejemplo: ENV-20261028-AB12.</small
+              >
             }
           } @else {
-            <small class="hint">Formato: ENV-AAAAMMDD-XXXX (17 caracteres).</small>
+            <small id="tracking-code-help" class="hint"
+              >Formato: ENV-AAAAMMDD-XXXX (17 caracteres).</small
+            >
           }
         </div>
       </div>
     </form>
     @if (error()) {
-      <p class="error">{{ error() }}</p>
+      <p class="error" role="alert">{{ error() }}</p>
     }
     @if (result(); as item) {
       <div class="result">

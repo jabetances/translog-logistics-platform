@@ -1,3 +1,4 @@
+import { hash } from 'bcryptjs';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import type { Repository } from 'typeorm';
@@ -89,8 +90,12 @@ describe('UsersController', () => {
       createdAt: new Date(),
       mustChangePassword: true,
     };
+    const currentProfile = {
+      ...profile,
+      passwordHash: await hash('old private phrase 2026', 12),
+    };
     users.findOne
-      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce(currentProfile)
       .mockResolvedValueOnce({ ...profile, mustChangePassword: false });
     users.update.mockResolvedValue({ affected: 1 });
     const result = await controller.update(
@@ -103,10 +108,32 @@ describe('UsersController', () => {
     expect(changes.mustChangePassword).toBe(false);
     expect(result.mustChangePassword).toBe(false);
     expect(result).not.toHaveProperty('passwordHash');
-    expect(users.findOne.mock.calls[0]?.[0]).not.toHaveProperty(
-      'select.passwordHash',
-    );
+    expect(users.findOne.mock.calls[0]?.[0].select.passwordHash).toBe(true);
+    expect(users.findOne.mock.calls[1]?.[0].select.passwordHash).not.toBe(true);
     expect(users.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechaza reutilizar la contraseña actual', async () => {
+    const { controller, users } = makeController();
+    const currentPassword = 'correct horse battery staple';
+    users.findOne.mockResolvedValueOnce({
+      id: 'user-2',
+      email: 'a@example.com',
+      fullName: 'Ana',
+      role: UserRole.OPERATOR,
+      createdAt: new Date(),
+      mustChangePassword: false,
+      passwordHash: await hash(currentPassword, 12),
+    });
+
+    await expect(
+      controller.update(
+        'user-2',
+        { password: currentPassword },
+        { user: { sub: 'user-1' } },
+      ),
+    ).rejects.toThrow('distinta de la actual');
+    expect(users.update).not.toHaveBeenCalled();
   });
 
   it('rechaza una actualización vacía con password null', async () => {
