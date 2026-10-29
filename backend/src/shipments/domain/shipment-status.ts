@@ -25,12 +25,10 @@ const TRANSITIONS: Record<ShipmentStatus, readonly ShipmentStatus[]> = {
   ],
   [ShipmentStatus.IN_WAREHOUSE]: [
     ShipmentStatus.IN_TRANSIT,
-    ShipmentStatus.RETURNED,
     ShipmentStatus.CANCELLED,
   ],
   [ShipmentStatus.IN_TRANSIT]: [
     ShipmentStatus.OUT_FOR_DELIVERY,
-    ShipmentStatus.RETURNED,
     ShipmentStatus.CANCELLED,
   ],
   [ShipmentStatus.OUT_FOR_DELIVERY]: [

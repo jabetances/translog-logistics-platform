@@ -174,7 +174,6 @@ describe('ShipmentsService.findOne', () => {
     expect(detail.createdByName).toBe('Supervisora');
     expect(detail.allowedTransitions).toEqual([
       'OUT_FOR_DELIVERY',
-      'RETURNED',
       'CANCELLED',
     ]);
     expect(detail.events[0].actorName).toBe('Operador A');
