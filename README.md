@@ -27,7 +27,7 @@ La base de datos crea sus tablas automáticamente solo en este entorno de desarr
 - `GET /api/users` — listado de usuarios (solo supervisor); nunca devuelve contraseñas ni hashes.
 - `PATCH /api/users/:id` — actualizar nombre, correo, rol y, opcionalmente, establecer una nueva contraseña (solo supervisor); omitir `password` la conserva. El hash se genera con bcrypt y nunca se devuelve. No permite cambiar el propio rol ni degradar al último supervisor.
 - `DELETE /api/users/:id` — eliminar usuarios sin envíos/eventos asociados; protege la cuenta activa y al último supervisor. La lista abre el mismo formulario para alta (`/users/new`) y edición (`/users/:id/edit`); en edición se dejan vacíos los campos de contraseña para conservarla, y se pide confirmación al cambiarla.
-- `POST /api/shipments`, `GET /api/shipments?page=1&limit=20&status=IN_WAREHOUSE&q=texto&sortBy=createdAt&sortDirection=DESC`, `GET /api/shipments/:id`. La lista admite filtro por estado, búsqueda por código/destinatario/dirección/teléfono y orden por código, destinatario, destino, estado o fecha.
+- `POST /api/shipments`, `GET /api/shipments?page=1&limit=20&status=IN_WAREHOUSE&q=texto&sortBy=createdAt&sortDirection=DESC`, `GET /api/shipments/:id`. La lista admite filtro por estado, búsqueda por código/destinatario/dirección/teléfono sin distinguir mayúsculas ni tildes, y orden por código, destinatario, destino, estado o fecha.
 - `PATCH /api/shipments/:id/status`, `DELETE /api/shipments/:id`.
 - `POST /api/shipments/assign-vehicles` — First Fit Decreasing; todos deben existir y estar IN_WAREHOUSE.
 - `GET /api/tracking/:trackingCode` — público.

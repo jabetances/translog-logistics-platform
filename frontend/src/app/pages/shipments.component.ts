@@ -407,8 +407,9 @@ export class ShipmentsComponent {
   create() {
     if (this.form.invalid) return;
     this.busy.set(true);
+    this.error.set('');
     this.api.create(this.form.getRawValue()).subscribe({
-      next: () => {
+      next: (shipment) => {
         this.showForm.set(false);
         this.form.reset({
           originAddress: '',
@@ -417,6 +418,7 @@ export class ShipmentsComponent {
           contactPhone: '',
           weightKg: 1,
         });
+        this.notifications.showSuccess('Envío creado: ' + shipment.trackingCode, 5000);
         this.load(1);
       },
       error: (e) => {

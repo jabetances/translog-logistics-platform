@@ -8,4 +8,8 @@ export class NotificationService {
   showError(message: string): void {
     this.snackBar.open(message, 'Cerrar', { duration: 5000 });
   }
+
+  showSuccess(message: string, duration = 3000): void {
+    this.snackBar.open(message, 'Cerrar', { duration });
+  }
 }

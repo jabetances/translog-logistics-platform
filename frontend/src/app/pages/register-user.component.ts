@@ -243,9 +243,10 @@ export class RegisterUserComponent {
       if (v.password) payload.password = v.password;
       this.auth.updateUser(this.id!, payload).subscribe({
         next: () => {
-          this.done.set(true);
           this.cancelPasswordChange();
           this.busy.set(false);
+          this.notifications.showSuccess('Usuario editado.');
+          void this.router.navigate(['/users']);
         },
         error: (e) => this.fail(e),
       });

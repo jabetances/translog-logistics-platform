@@ -5,8 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, In, ILike } from 'typeorm';
-import type { FindOptionsOrder } from 'typeorm';
+import { DataSource, Repository, In } from 'typeorm';
 import { randomInt } from 'node:crypto';
 import { Shipment } from './entities/shipment.entity.js';
 import { ShipmentEvent } from './entities/shipment-event.entity.js';
@@ -19,6 +18,17 @@ import {
   ShipmentStatus,
   SHIPMENT_STATUS_LABELS,
 } from './domain/shipment-status.js';
+
+export function normalizeSearchTerm(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function accentInsensitiveColumn(column: string): string {
+  return `translate(lower(coalesce(${column}, '')), 'áéíóúüñ', 'aeiouun')`;
+}
 
 export function trackingDateMadrid(date: Date): string {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -120,27 +130,30 @@ export class ShipmentsService {
       throw new BadRequestException(
         'El sentido de ordenación debe ser ASC o DESC.',
       );
-    const order = {
-      [field]: direction,
-      id: 'ASC',
-    } as FindOptionsOrder<Shipment>;
     const term = search?.trim();
-    const statusFilter = status ? { status } : {};
-    const where = term
-      ? [
-          { ...statusFilter, trackingCode: ILike('%' + term + '%') },
-          { ...statusFilter, recipientName: ILike('%' + term + '%') },
-          { ...statusFilter, originAddress: ILike('%' + term + '%') },
-          { ...statusFilter, destinationAddress: ILike('%' + term + '%') },
-          { ...statusFilter, contactPhone: ILike('%' + term + '%') },
-        ]
-      : statusFilter;
-    const [data, total] = await this.shipments.findAndCount({
-      where,
-      order,
-      skip: (safePage - 1) * safeLimit,
-      take: safeLimit,
-    });
+    const query = this.shipments.createQueryBuilder('shipment');
+    if (status) query.andWhere('shipment.status = :status', { status });
+    if (term) {
+      const searchableColumns = [
+        'shipment.trackingCode',
+        'shipment.recipientName',
+        'shipment.originAddress',
+        'shipment.destinationAddress',
+        'shipment.contactPhone',
+      ];
+      const predicates = searchableColumns
+        .map((column) => accentInsensitiveColumn(column) + ' LIKE :term')
+        .join(' OR ');
+      query.andWhere('(' + predicates + ')', {
+        term: '%' + normalizeSearchTerm(term) + '%',
+      });
+    }
+    const [data, total] = await query
+      .orderBy('shipment.' + field, direction as 'ASC' | 'DESC')
+      .addOrderBy('shipment.id', 'ASC')
+      .skip((safePage - 1) * safeLimit)
+      .take(safeLimit)
+      .getManyAndCount();
     return {
       data,
       pagination: {

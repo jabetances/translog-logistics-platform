@@ -1,19 +1,28 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ILike } from 'typeorm';
+
 import type { DataSource, Repository } from 'typeorm';
 import { Shipment } from './entities/shipment.entity.js';
 import { ShipmentStatus } from './domain/shipment-status.js';
 import {
   isPostgresUniqueViolation,
+  normalizeSearchTerm,
   ShipmentsService,
   trackingDateMadrid,
 } from './shipments.service.js';
 
 describe('ShipmentsService.list', () => {
-  it('combina el estado con búsqueda textual y conserva la paginación', async () => {
-    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+  it('combina estado, búsqueda insensible a tildes y paginación', async () => {
+    const query = {
+      andWhere: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      addOrderBy: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      take: vi.fn().mockReturnThis(),
+      getManyAndCount: vi.fn().mockResolvedValue([[], 0]),
+    };
+    const createQueryBuilder = vi.fn().mockReturnValue(query);
     const service = new ShipmentsService(
-      { findAndCount } as unknown as Repository<Shipment>,
+      { createQueryBuilder } as unknown as Repository<Shipment>,
       {} as DataSource,
     );
 
@@ -21,38 +30,36 @@ describe('ShipmentsService.list', () => {
       2,
       10,
       ShipmentStatus.IN_TRANSIT,
-      '  ENV-ana  ',
+      '  MÁLAGA  ',
       'trackingCode',
       'DESC',
     );
 
-    expect(findAndCount).toHaveBeenCalledWith({
-      where: [
-        { status: ShipmentStatus.IN_TRANSIT, trackingCode: ILike('%ENV-ana%') },
-        {
-          status: ShipmentStatus.IN_TRANSIT,
-          recipientName: ILike('%ENV-ana%'),
-        },
-        {
-          status: ShipmentStatus.IN_TRANSIT,
-          originAddress: ILike('%ENV-ana%'),
-        },
-        {
-          status: ShipmentStatus.IN_TRANSIT,
-          destinationAddress: ILike('%ENV-ana%'),
-        },
-        { status: ShipmentStatus.IN_TRANSIT, contactPhone: ILike('%ENV-ana%') },
-      ],
-      order: { trackingCode: 'DESC', id: 'ASC' },
-      skip: 10,
-      take: 10,
-    });
+    expect(createQueryBuilder).toHaveBeenCalledWith('shipment');
+    expect(query.andWhere).toHaveBeenNthCalledWith(
+      1,
+      'shipment.status = :status',
+      {
+        status: ShipmentStatus.IN_TRANSIT,
+      },
+    );
+    const [searchSql, parameters] = query.andWhere.mock.calls[1];
+    expect(searchSql).toContain(
+      "translate(lower(coalesce(shipment.destinationAddress, '')), 'áéíóúüñ', 'aeiouun') LIKE :term",
+    );
+    expect(searchSql.match(/LIKE :term/g)).toHaveLength(5);
+    expect(parameters).toEqual({ term: '%malaga%' });
+    expect(normalizeSearchTerm('Málaga')).toBe('malaga');
+    expect(query.orderBy).toHaveBeenCalledWith('shipment.trackingCode', 'DESC');
+    expect(query.addOrderBy).toHaveBeenCalledWith('shipment.id', 'ASC');
+    expect(query.skip).toHaveBeenCalledWith(10);
+    expect(query.take).toHaveBeenCalledWith(10);
   });
 
-  it('rechaza campos de ordenación arbitrarios', async () => {
-    const findAndCount = vi.fn().mockResolvedValue([[], 0]);
+  it('rechaza campos de ordenación arbitrarios antes de consultar', async () => {
+    const createQueryBuilder = vi.fn();
     const service = new ShipmentsService(
-      { findAndCount } as unknown as Repository<Shipment>,
+      { createQueryBuilder } as unknown as Repository<Shipment>,
       {} as DataSource,
     );
 
@@ -62,7 +69,7 @@ describe('ShipmentsService.list', () => {
     await expect(
       service.list(1, 20, undefined, undefined, 'createdAt', 'UP'),
     ).rejects.toThrow('El sentido de ordenación debe ser ASC o DESC.');
-    expect(findAndCount).not.toHaveBeenCalled();
+    expect(createQueryBuilder).not.toHaveBeenCalled();
   });
 });
 
