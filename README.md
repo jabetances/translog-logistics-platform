@@ -4,21 +4,42 @@
 
 Monorepo para la prueba técnica: API NestJS + PostgreSQL y frontend Angular standalone con Angular Material.
 
-## Arranque rápido (Docker)
+## Arranque rápido: 3 comandos
 
-1. Copia `.env.example` a `.env` y cambia `DB_PASSWORD`, `JWT_SECRET` y `BOOTSTRAP_SUPERVISOR_PASSWORD` por valores propios.
-2. Ejecuta `docker compose up --build` en la raíz.
-3. Abre `http://localhost:4200`, Swagger en `http://localhost:3000/api/docs`.
-4. Inicia sesión usando el correo y contraseña configurados como bootstrap supervisor.
+Necesitas Docker Engine y Docker Compose V2. Abre una terminal y ejecuta estas tres líneas, en orden:
 
-La base de datos crea sus tablas automáticamente solo en este entorno de desarrollo (`DB_SYNCHRONIZE=true`). PostgreSQL queda en la red interna de Compose, sin publicar el puerto 5432 del host; así no colisiona con una instalación local. En producción se debe desactivar `synchronize` y usar migraciones.
+```bash
+git clone https://github.com/jabetances/translog-logistics-platform.git
+cd translog-logistics-platform && cp .env.example .env
+docker compose up --build
+```
 
-## Ejecución local sin contenedores
+No hace falta cambiar el `.env` para esta prueba local.
 
-- Si PostgreSQL está instalado en Ubuntu: crea el usuario y la base con `sudo -u postgres createuser --pwprompt translog` y `sudo -u postgres createdb --owner=translog translog`. Elige una contraseña local y pon exactamente esa en `DB_PASSWORD` del archivo `backend/.env`.
-- En `backend/`, ejecuta `cp .env.example .env`; cambia `DB_PASSWORD`, `JWT_SECRET` y las credenciales `BOOTSTRAP_SUPERVISOR_*`. Mantén `DB_HOST=localhost` y `DB_SYNCHRONIZE=true` solo para desarrollo. Luego `npm ci && npm run start:dev`.
+Espera a que termine la compilación. Después abre:
+
+- Aplicación: `http://localhost:4200`
+- API (Swagger): `http://localhost:3000/api/docs`
+
+**Acceso de la primera instalación, con la base de datos vacía:**
+
+- Correo: `admin@example.test`
+- Contraseña temporal: `admin`
+
+Al entrar, TransLog te obliga a cambiarla por una contraseña de al menos 10 caracteres antes de usar la aplicación. El usuario predeterminado solo se crea si la base aún no tiene supervisores; si ya existe un volumen de datos, se conservan las cuentas anteriores.
+
+> **Solo para probarlo en tu PC.** `admin/admin` es una credencial pública de demostración. No expongas la aplicación a Internet ni uses estos valores en producción. PostgreSQL solo está disponible dentro de la red de Compose; la web y la API se publican en localhost.
+
+Para parar, pulsa `Ctrl+C` en esa terminal. Los datos se conservan; `docker compose down` también para los contenedores sin borrar el volumen.
+
+<details>
+<summary>Alternativa avanzada: ejecutar sin contenedores</summary>
+
+- Si PostgreSQL está instalado en Ubuntu: crea el usuario y la base con `sudo -u postgres createuser --pwprompt translog` y `sudo -u postgres createdb --owner=translog translog`. Pon la contraseña elegida en `DB_PASSWORD` de `backend/.env`.
+- En `backend/`, copia `.env.example` a `.env` y ajusta las variables para tu PostgreSQL local. Mantén `DB_SYNCHRONIZE=true` solo para desarrollo. Ejecuta `npm ci && npm run start:dev`.
 - En otra terminal, dentro de `frontend/`, ejecuta `npm ci && npm start`.
-- Alternativamente, con Docker: `docker compose up -d postgres`, configura `backend/.env` con `DB_HOST=localhost` y sigue los dos pasos de ejecución anteriores.
+
+</details>
 
 ## API
 

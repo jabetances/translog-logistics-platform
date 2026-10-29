@@ -7,6 +7,7 @@ import { User } from './users/user.entity.js';
 import { Shipment } from './shipments/entities/shipment.entity.js';
 import { ShipmentEvent } from './shipments/entities/shipment-event.entity.js';
 import { InitialSchema1793218670099 } from './migrations/1793218670099-InitialSchema.js';
+import { RequirePasswordChange1793262152679 } from './migrations/1793262152679-RequirePasswordChange.js';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -24,7 +25,10 @@ import { InitialSchema1793218670099 } from './migrations/1793218670099-InitialSc
           database: config.get<string>('DB_NAME') ?? 'translog',
           schema: config.get<string>('DB_SCHEMA') ?? 'public',
           entities: [User, Shipment, ShipmentEvent],
-          migrations: [InitialSchema1793218670099],
+          migrations: [
+            InitialSchema1793218670099,
+            RequirePasswordChange1793262152679,
+          ],
           synchronize,
           migrationsRun:
             !synchronize && config.get<string>('DB_MIGRATIONS_RUN') === 'true',

@@ -13,13 +13,30 @@ import { NotificationService } from '../core/notification.service';
   providers: [NotificationService],
   template: `<section class="card">
     <p class="eyebrow">GESTIÓN DE ACCESOS</p>
-    <h1>{{ editing ? 'Editar usuario' : 'Registrar usuario' }}</h1>
+    <h1>
+      {{
+        passwordChangeRequired()
+          ? 'Cambia tu contraseña'
+          : editing
+            ? 'Editar usuario'
+            : 'Registrar usuario'
+      }}
+    </h1>
+    @if (passwordChangeRequired()) {
+      <p class="password-warning" role="alert">
+        Esta contraseña temporal es insegura. Debes cambiarla antes de usar TransLog.
+      </p>
+    }
     @if (loading()) {
       <p>Cargando usuario…</p>
     } @else {
       <form [formGroup]="form" (ngSubmit)="submit()">
         <label
-          >Nombre completo<input formControlName="fullName" autocomplete="name" maxlength="120"
+          >Nombre completo<input
+            formControlName="fullName"
+            autocomplete="name"
+            maxlength="120"
+            [readonly]="passwordChangeRequired()"
         /></label>
         <label
           >Correo<input
@@ -27,6 +44,7 @@ import { NotificationService } from '../core/notification.service';
             formControlName="email"
             autocomplete="username"
             maxlength="254"
+            [readonly]="passwordChangeRequired()"
         /></label>
         @if (editing && !changePassword()) {
           <button type="button" class="secondary" (click)="beginPasswordChange()">
@@ -101,13 +119,16 @@ import { NotificationService } from '../core/notification.service';
             }
           </div>
         }
-        @if (editing && changePassword()) {
+        @if (editing && changePassword() && !passwordChangeRequired()) {
           <button type="button" class="secondary" (click)="cancelPasswordChange()">
             Cancelar cambio de contraseña
           </button>
         }
         <label
-          >Rol<select formControlName="role" [disabled]="editing && ownAccount">
+          >Rol<select
+            formControlName="role"
+            [disabled]="(editing && ownAccount) || passwordChangeRequired()"
+          >
             <option value="OPERATOR">Operador</option>
             <option value="SUPERVISOR">Supervisor</option></select
           ><small class="hint">El supervisor puede gestionar usuarios.</small></label
@@ -126,17 +147,27 @@ import { NotificationService } from '../core/notification.service';
             color="primary"
             [disabled]="busy() || form.invalid || passwordsMismatch()"
           >
-            {{ busy() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar' }}
+            {{
+              busy()
+                ? 'Guardando…'
+                : passwordChangeRequired()
+                  ? 'Cambiar contraseña y continuar'
+                  : editing
+                    ? 'Guardar cambios'
+                    : 'Registrar'
+            }}
           </button>
-          <button type="button" class="secondary" [disabled]="busy()" (click)="goBack()">
-            Volver a usuarios
-          </button>
+          @if (!passwordChangeRequired()) {
+            <button type="button" class="secondary" [disabled]="busy()" (click)="goBack()">
+              Volver a usuarios
+            </button>
+          }
         </div>
       </form>
     }
   </section>`,
   styles: [
-    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;font:inherit}.hint{color:#64777e;font-size:12px}.password-field{display:grid;gap:6px}.password-control{position:relative;display:flex;align-items:center}.password-control input{width:100%;padding-right:46px}.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:transparent;color:#64777e;cursor:pointer}.password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.password-toggle:focus-visible{outline:2px solid #087e8b;outline-offset:1px}.field-error,.error{color:#b42318}.success{color:#087e8b}.buttons{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:white;color:#18313a;border:1px solid #d6e1e4;padding:11px;font:inherit;cursor:pointer}.secondary:disabled{opacity:.55;cursor:not-allowed}button[mat-flat-button]{background:#087e8b;color:white;padding:11px;border:0;font-weight:700}',
+    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;font:inherit}.hint{color:#64777e;font-size:12px}.password-field{display:grid;gap:6px}.password-control{position:relative;display:flex;align-items:center}.password-control input{width:100%;padding-right:46px}.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:transparent;color:#64777e;cursor:pointer}.password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.password-toggle:focus-visible{outline:2px solid #087e8b;outline-offset:1px}.password-warning{margin:0;padding:12px 14px;background:#fff0f0;border:1px solid #b42318;color:#b42318;font-weight:700}.field-error,.error{color:#b42318}.success{color:#087e8b}.buttons{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:white;color:#18313a;border:1px solid #d6e1e4;padding:11px;font:inherit;cursor:pointer}.secondary:disabled{opacity:.55;cursor:not-allowed}button[mat-flat-button]{background:#087e8b;color:white;padding:11px;border:0;font-weight:700}',
   ],
 })
 export class RegisterUserComponent {
@@ -150,6 +181,7 @@ export class RegisterUserComponent {
   readonly error = signal('');
   readonly loading = signal(false);
   readonly changePassword = signal(false);
+  readonly passwordChangeRequired = signal(false);
   readonly showPassword = signal(false);
   readonly showConfirmPassword = signal(false);
   readonly id = this.route.snapshot.paramMap.get('id');
@@ -169,6 +201,22 @@ export class RegisterUserComponent {
       this.form.controls.password.updateValueAndValidity();
       this.form.controls.confirmPassword.updateValueAndValidity();
     } else {
+      const current = this.auth.user();
+      if (current?.id === this.id && current.mustChangePassword === true) {
+        this.passwordChangeRequired.set(true);
+        this.changePassword.set(true);
+        this.ownAccount = true;
+        this.form.patchValue({
+          fullName: current.fullName,
+          email: current.email,
+          role: current.role,
+        });
+        this.form.controls.password.addValidators(Validators.required);
+        this.form.controls.confirmPassword.addValidators(Validators.required);
+        this.form.controls.password.updateValueAndValidity();
+        this.form.controls.confirmPassword.updateValueAndValidity();
+        return;
+      }
       this.loading.set(true);
       this.auth.listUsers().subscribe({
         next: (rows) => {
@@ -226,12 +274,24 @@ export class RegisterUserComponent {
     if (
       this.editing &&
       v.password &&
+      !this.passwordChangeRequired() &&
       !window.confirm('¿Confirmas cambiar la contraseña de ' + v.fullName + '?')
     )
       return;
     this.busy.set(true);
     this.done.set(false);
     this.error.set('');
+    if (this.editing && this.passwordChangeRequired()) {
+      this.auth.updateUser(this.id!, { password: v.password }).subscribe({
+        next: () => {
+          this.busy.set(false);
+          this.notifications.showSuccess('Contraseña cambiada. Ya puedes continuar.');
+          void this.router.navigate(['/shipments']);
+        },
+        error: (e) => this.fail(e),
+      });
+      return;
+    }
     if (this.editing) {
       const payload: {
         fullName: string;

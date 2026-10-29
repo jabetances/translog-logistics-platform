@@ -17,6 +17,7 @@ describe('JwtStrategy', () => {
       id: 'user-1',
       email: 'actual@example.com',
       role: UserRole.OPERATOR,
+      mustChangePassword: true,
     });
     const strategy = makeStrategy(findOne);
 
@@ -30,10 +31,16 @@ describe('JwtStrategy', () => {
       sub: 'user-1',
       email: 'actual@example.com',
       role: UserRole.OPERATOR,
+      mustChangePassword: true,
     });
     expect(findOne).toHaveBeenCalledWith({
       where: { id: 'user-1' },
-      select: { id: true, email: true, role: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        mustChangePassword: true,
+      },
     });
   });
 

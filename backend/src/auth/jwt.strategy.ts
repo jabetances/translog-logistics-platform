@@ -22,9 +22,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: { sub: string; email: string; role: string }) {
     const user = await this.users.findOne({
       where: { id: payload.sub },
-      select: { id: true, email: true, role: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        mustChangePassword: true,
+      },
     });
     if (!user) throw new UnauthorizedException('La cuenta ya no está activa');
-    return { sub: user.id, email: user.email, role: user.role };
+    return {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword,
+    };
   }
 }

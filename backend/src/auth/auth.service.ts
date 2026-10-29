@@ -44,6 +44,7 @@ export class AuthService implements OnModuleInit {
           'Supervisor inicial',
         role: UserRole.SUPERVISOR,
         passwordHash: await bcrypt.hash(password, 12),
+        mustChangePassword: true,
       })
       .orIgnore()
       .execute();
@@ -64,6 +65,7 @@ export class AuthService implements OnModuleInit {
         fullName: dto.fullName,
         role: dto.role,
         passwordHash: await bcrypt.hash(dto.password, 12),
+        mustChangePassword: false,
       }),
     );
     return {
@@ -71,6 +73,7 @@ export class AuthService implements OnModuleInit {
       email: user.email,
       fullName: user.fullName,
       role: user.role,
+      mustChangePassword: user.mustChangePassword,
     };
   }
   async login(dto: LoginDto) {
@@ -93,6 +96,7 @@ export class AuthService implements OnModuleInit {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }

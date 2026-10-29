@@ -86,6 +86,7 @@ export class UsersController {
         fullName: true,
         role: true,
         createdAt: true,
+        mustChangePassword: true,
       },
     });
     if (!user) throw new NotFoundException('Usuario no encontrado');
@@ -114,7 +115,10 @@ export class UsersController {
     if (dto.fullName !== undefined) changes.fullName = dto.fullName;
     if (dto.email !== undefined) changes.email = dto.email;
     if (dto.role !== undefined) changes.role = dto.role;
-    if (password !== undefined) changes.passwordHash = await hash(password, 12);
+    if (password !== undefined) {
+      changes.passwordHash = await hash(password, 12);
+      changes.mustChangePassword = false;
+    }
     const result = await this.users.update(id, changes);
     if (!result.affected) throw new NotFoundException('Usuario no encontrado');
     const updated = await this.users.findOne({
@@ -125,6 +129,7 @@ export class UsersController {
         fullName: true,
         role: true,
         createdAt: true,
+        mustChangePassword: true,
       },
     });
     if (!updated) throw new NotFoundException('Usuario no encontrado');

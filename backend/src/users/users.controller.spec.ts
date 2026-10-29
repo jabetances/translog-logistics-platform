@@ -87,8 +87,11 @@ describe('UsersController', () => {
       fullName: 'Ana',
       role: UserRole.OPERATOR,
       createdAt: new Date(),
+      mustChangePassword: true,
     };
-    users.findOne.mockResolvedValueOnce(profile).mockResolvedValueOnce(profile);
+    users.findOne
+      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce({ ...profile, mustChangePassword: false });
     users.update.mockResolvedValue({ affected: 1 });
     const result = await controller.update(
       'user-2',
@@ -97,6 +100,8 @@ describe('UsersController', () => {
     );
     const changes = users.update.mock.calls[0]?.[1] as Partial<User>;
     expect(changes.passwordHash).toMatch(/^\$2[aby]\$12\$/);
+    expect(changes.mustChangePassword).toBe(false);
+    expect(result.mustChangePassword).toBe(false);
     expect(result).not.toHaveProperty('passwordHash');
     expect(users.findOne.mock.calls[0]?.[0]).not.toHaveProperty(
       'select.passwordHash',

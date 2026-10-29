@@ -7,6 +7,7 @@ export interface AuthUser {
   email: string;
   fullName: string;
   role: 'OPERATOR' | 'SUPERVISOR';
+  mustChangePassword?: boolean;
 }
 export interface ManagedUser extends AuthUser {
   createdAt: string;
@@ -34,19 +35,22 @@ export class AuthService {
     id: string,
     data: { fullName?: string; email?: string; role?: AuthUser['role']; password?: string },
   ) {
-    return this.http.patch<ManagedUser>(API + '/users/' + id, data).pipe(
-      tap((updated) => {
-        if (this.user()?.id !== id) return;
-        const profile: AuthUser = {
-          id: updated.id,
-          email: updated.email,
-          fullName: updated.fullName,
-          role: updated.role,
-        };
-        localStorage.setItem('translog_user', JSON.stringify(profile));
-        this.user.set(profile);
-      }),
-    );
+    return this.http
+      .patch<ManagedUser & { mustChangePassword: boolean }>(API + '/users/' + id, data)
+      .pipe(
+        tap((updated) => {
+          if (this.user()?.id !== id) return;
+          const profile: AuthUser = {
+            id: updated.id,
+            email: updated.email,
+            fullName: updated.fullName,
+            role: updated.role,
+            mustChangePassword: updated.mustChangePassword,
+          };
+          localStorage.setItem('translog_user', JSON.stringify(profile));
+          this.user.set(profile);
+        }),
+      );
   }
   deleteUser(id: string) {
     return this.http.delete<{ id: string; message: string }>(API + '/users/' + id);

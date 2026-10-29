@@ -36,6 +36,11 @@ export class User {
   @ApiProperty({ enum: UserRole, enumName: 'UserRole' })
   @Column({ type: 'enum', enum: UserRole, default: UserRole.OPERATOR })
   role!: UserRole;
+
+  @ApiProperty({ type: Boolean, default: false })
+  @Column({ type: 'boolean', default: false })
+  mustChangePassword!: boolean;
+
   @ApiProperty({ type: String, format: 'date-time' })
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
