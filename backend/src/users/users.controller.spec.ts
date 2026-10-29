@@ -79,6 +79,43 @@ describe('UsersController', () => {
     });
   });
 
+  it('hashea password con costo 12 y no expone passwordHash', async () => {
+    const { controller, users } = makeController();
+    const profile = {
+      id: 'user-2',
+      email: 'a@example.com',
+      fullName: 'Ana',
+      role: UserRole.OPERATOR,
+      createdAt: new Date(),
+    };
+    users.findOne.mockResolvedValueOnce(profile).mockResolvedValueOnce(profile);
+    users.update.mockResolvedValue({ affected: 1 });
+    const result = await controller.update(
+      'user-2',
+      { password: 'correct-horse-12' },
+      { user: { sub: 'user-1' } },
+    );
+    const changes = users.update.mock.calls[0]?.[1] as Partial<User>;
+    expect(changes.passwordHash).toMatch(/^\$2[aby]\$12\$/);
+    expect(result).not.toHaveProperty('passwordHash');
+    expect(users.findOne.mock.calls[0]?.[0]).not.toHaveProperty(
+      'select.passwordHash',
+    );
+    expect(users.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('rechaza una actualización vacía con password null', async () => {
+    const { controller, users } = makeController();
+    await expect(
+      controller.update(
+        'user-2',
+        { password: null as unknown as string },
+        { user: { sub: 'user-1' } },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(users.findOne).not.toHaveBeenCalled();
+  });
+
   it('impide cambiar a un correo duplicado o el propio rol', async () => {
     const duplicateEmail = makeController();
     duplicateEmail.users.findOne

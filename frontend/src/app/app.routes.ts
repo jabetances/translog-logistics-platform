@@ -20,6 +20,13 @@ export const routes: Routes = [
       import('./pages/register-user.component').then((m) => m.RegisterUserComponent),
   },
   {
+    path: 'users/:id/edit',
+    title: 'TransLog — Editar usuario',
+    canActivate: [authGuard, supervisorGuard],
+    loadComponent: () =>
+      import('./pages/register-user.component').then((m) => m.RegisterUserComponent),
+  },
+  {
     path: 'users',
     title: 'TransLog — Usuarios',
     canActivate: [authGuard, supervisorGuard],

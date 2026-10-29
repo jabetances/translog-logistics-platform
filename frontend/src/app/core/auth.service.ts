@@ -30,7 +30,10 @@ export class AuthService {
   listUsers() {
     return this.http.get<ManagedUser[]>(API + '/users');
   }
-  updateUser(id: string, data: { fullName?: string; email?: string; role?: AuthUser['role'] }) {
+  updateUser(
+    id: string,
+    data: { fullName?: string; email?: string; role?: AuthUser['role']; password?: string },
+  ) {
     return this.http.patch<ManagedUser>(API + '/users/' + id, data).pipe(
       tap((updated) => {
         if (this.user()?.id !== id) return;

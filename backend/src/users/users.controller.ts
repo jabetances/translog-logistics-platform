@@ -15,6 +15,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { hash } from 'bcryptjs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { Roles } from '../auth/roles.decorator.js';
 import { RolesGuard } from '../auth/roles.guard.js';
@@ -54,17 +55,20 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({
-    summary: 'Actualizar nombre, correo o rol de un usuario (solo supervisor)',
+    summary: 'Actualizar perfil o contraseña de un usuario (solo supervisor)',
   })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
     @Req() request: { user: { sub: string } },
   ) {
+    const password =
+      typeof dto.password === 'string' ? dto.password : undefined;
     if (
       dto.fullName === undefined &&
       dto.email === undefined &&
-      dto.role === undefined
+      dto.role === undefined &&
+      password === undefined
     ) {
       throw new BadRequestException('Indica al menos un dato para actualizar');
     }
@@ -110,6 +114,7 @@ export class UsersController {
     if (dto.fullName !== undefined) changes.fullName = dto.fullName;
     if (dto.email !== undefined) changes.email = dto.email;
     if (dto.role !== undefined) changes.role = dto.role;
+    if (password !== undefined) changes.passwordHash = await hash(password, 12);
     const result = await this.users.update(id, changes);
     if (!result.affected) throw new NotFoundException('Usuario no encontrado');
     const updated = await this.users.findOne({

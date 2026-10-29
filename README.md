@@ -11,7 +11,7 @@ Monorepo para la prueba técnica: API NestJS + PostgreSQL y frontend Angular sta
 3. Abre `http://localhost:4200`, Swagger en `http://localhost:3000/api/docs`.
 4. Inicia sesión usando el correo y contraseña configurados como bootstrap supervisor.
 
-La base de datos crea sus tablas automáticamente solo en este entorno de desarrollo (`DB_SYNCHRONIZE=true`). En producción se debe desactivar y usar migraciones.
+La base de datos crea sus tablas automáticamente solo en este entorno de desarrollo (`DB_SYNCHRONIZE=true`). PostgreSQL queda en la red interna de Compose, sin publicar el puerto 5432 del host; así no colisiona con una instalación local. En producción se debe desactivar `synchronize` y usar migraciones.
 
 ## Ejecución local sin contenedores
 
@@ -25,8 +25,8 @@ La base de datos crea sus tablas automáticamente solo en este entorno de desarr
 - `POST /api/auth/login` — JWT.
 - `POST /api/auth/register` — solo supervisor autenticado.
 - `GET /api/users` — listado de usuarios (solo supervisor); nunca devuelve contraseñas ni hashes.
-- `PATCH /api/users/:id` — actualizar nombre, correo o rol (solo supervisor); no permite cambiar el propio rol ni degradar al último supervisor. La contraseña no se modifica desde esta operación.
-- `DELETE /api/users/:id` — eliminar usuarios sin envíos/eventos asociados; protege la cuenta activa y al último supervisor.
+- `PATCH /api/users/:id` — actualizar nombre, correo, rol y, opcionalmente, establecer una nueva contraseña (solo supervisor); omitir `password` la conserva. El hash se genera con bcrypt y nunca se devuelve. No permite cambiar el propio rol ni degradar al último supervisor.
+- `DELETE /api/users/:id` — eliminar usuarios sin envíos/eventos asociados; protege la cuenta activa y al último supervisor. La lista abre el mismo formulario para alta (`/users/new`) y edición (`/users/:id/edit`); en edición se dejan vacíos los campos de contraseña para conservarla, y se pide confirmación al cambiarla.
 - `POST /api/shipments`, `GET /api/shipments?page=1&limit=20&status=IN_WAREHOUSE&q=texto&sortBy=createdAt&sortDirection=DESC`, `GET /api/shipments/:id`. La lista admite filtro por estado, búsqueda por código/destinatario/dirección/teléfono y orden por código, destinatario, destino, estado o fecha.
 - `PATCH /api/shipments/:id/status`, `DELETE /api/shipments/:id`.
 - `POST /api/shipments/assign-vehicles` — First Fit Decreasing; todos deben existir y estar IN_WAREHOUSE.

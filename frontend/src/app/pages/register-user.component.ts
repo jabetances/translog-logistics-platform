@@ -2,9 +2,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { NotificationService } from '../core/notification.service';
+
 @Component({
   selector: 'app-register-user',
   standalone: true,
@@ -12,123 +13,213 @@ import { NotificationService } from '../core/notification.service';
   providers: [NotificationService],
   template: `<section class="card">
     <p class="eyebrow">GESTIÓN DE ACCESOS</p>
-    <h1>Registrar usuario</h1>
-    <form [formGroup]="form" (ngSubmit)="submit()">
-      <label
-        >Nombre completo<input
-          formControlName="fullName"
-          autocomplete="name"
-          maxlength="120"
-        /><small class="hint">Obligatorio · entre 2 y 120 caracteres.</small>
-        @if (form.controls.fullName.touched || form.controls.fullName.dirty) {
-          @if (form.controls.fullName.hasError('required')) {
-            <small class="field-error">Escribe el nombre completo.</small>
-          } @else if (form.controls.fullName.hasError('minlength')) {
-            <small class="field-error">Debe tener al menos 2 caracteres.</small>
-          } @else if (form.controls.fullName.hasError('maxlength')) {
-            <small class="field-error">No puede superar 120 caracteres.</small>
-          }
+    <h1>{{ editing ? 'Editar usuario' : 'Registrar usuario' }}</h1>
+    @if (loading()) {
+      <p>Cargando usuario…</p>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <label
+          >Nombre completo<input formControlName="fullName" autocomplete="name" maxlength="120"
+        /></label>
+        <label
+          >Correo<input
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            maxlength="254"
+        /></label>
+        @if (editing && !changePassword()) {
+          <button type="button" class="secondary" (click)="beginPasswordChange()">
+            Cambiar contraseña
+          </button>
         }
-      </label>
-      <label
-        >Correo<input
-          type="email"
-          formControlName="email"
-          autocomplete="username"
-          maxlength="254"
-        /><small class="hint">Obligatorio · usa un formato como nombre@empresa.com.</small>
-        @if (form.controls.email.touched || form.controls.email.dirty) {
-          @if (form.controls.email.hasError('required')) {
-            <small class="field-error">Escribe el correo electrónico.</small>
-          } @else if (form.controls.email.hasError('email')) {
-            <small class="field-error">Revisa el formato; debe ser un correo válido.</small>
-          } @else if (form.controls.email.hasError('maxlength')) {
-            <small class="field-error">El correo no puede superar 254 caracteres.</small>
-          }
+        @if (!editing || changePassword()) {
+          <label
+            >Contraseña<input
+              type="password"
+              formControlName="password"
+              autocomplete="new-password"
+              minlength="10"
+              maxlength="100"
+            />
+            <small class="hint">{{
+              editing
+                ? 'Escribe la nueva contraseña y confírmala; debe tener 10–100 caracteres.'
+                : 'Obligatoria · 10–100 caracteres.'
+            }}</small></label
+          >
+          <label
+            >Confirmar contraseña<input
+              type="password"
+              formControlName="confirmPassword"
+              autocomplete="new-password"
+              minlength="10"
+              maxlength="100"
+            />
+            @if (
+              (form.controls.password.touched ||
+                form.controls.password.dirty ||
+                form.controls.confirmPassword.touched ||
+                form.controls.confirmPassword.dirty) &&
+              passwordsMismatch()
+            ) {
+              <small class="field-error">Las contraseñas no coinciden.</small>
+            }
+          </label>
         }
-      </label>
-      <label
-        >Contraseña<input
-          type="password"
-          formControlName="password"
-          autocomplete="new-password"
-          minlength="10"
-          maxlength="100"
-        /><small class="hint"
-          >Obligatoria · entre 10 y 100 caracteres. Ahora:
-          {{ form.controls.password.value.length }}.</small
+        @if (editing && changePassword()) {
+          <button type="button" class="secondary" (click)="cancelPasswordChange()">
+            Cancelar cambio de contraseña
+          </button>
+        }
+        <label
+          >Rol<select formControlName="role" [disabled]="editing && ownAccount">
+            <option value="OPERATOR">Operador</option>
+            <option value="SUPERVISOR">Supervisor</option></select
+          ><small class="hint">El supervisor puede gestionar usuarios.</small></label
         >
-        @if (form.controls.password.touched || form.controls.password.dirty) {
-          @if (form.controls.password.hasError('required')) {
-            <small class="field-error">Escribe una contraseña.</small>
-          } @else if (form.controls.password.hasError('minlength')) {
-            <small class="field-error"
-              >Le faltan {{ 10 - form.controls.password.value.length }} caracteres; debe tener al
-              menos 10.</small
-            >
-          } @else if (form.controls.password.hasError('maxlength')) {
-            <small class="field-error"
-              >Tiene {{ form.controls.password.value.length }} caracteres; el máximo es 100.</small
-            >
-          }
+        @if (error()) {
+          <p class="error" role="alert">{{ error() }}</p>
         }
-      </label>
-      <label
-        >Rol<select formControlName="role">
-          <option value="OPERATOR">Operador</option>
-          <option value="SUPERVISOR">Supervisor</option></select
-        ><small class="hint">El supervisor puede gestionar usuarios.</small></label
-      >
-      @if (error()) {
-        <p class="error" role="alert">{{ error() }}</p>
-      }
-      @if (done()) {
-        <p class="success" role="status">Usuario registrado.</p>
-      }
-      <button mat-flat-button color="primary" [disabled]="form.invalid || busy()">
-        {{ busy() ? 'Registrando…' : 'Registrar' }}
-      </button>
-    </form>
+        @if (done()) {
+          <p class="success" role="status">
+            {{ editing ? 'Cambios guardados.' : 'Usuario registrado.' }}
+          </p>
+        }
+        <div class="buttons">
+          <button
+            mat-flat-button
+            color="primary"
+            [disabled]="busy() || form.invalid || passwordsMismatch()"
+          >
+            {{ busy() ? 'Guardando…' : editing ? 'Guardar cambios' : 'Registrar' }}
+          </button>
+          <button type="button" class="secondary" [disabled]="busy()" (click)="goBack()">
+            Volver a usuarios
+          </button>
+        </div>
+      </form>
+    }
   </section>`,
   styles: [
-    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px;border-radius:0;box-shadow:none}.eyebrow{font-size:12px;color:#64777e;letter-spacing:.08em}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;border-radius:0;font:inherit}.hint{color:#64777e;font-size:12px}.field-error{color:#b42318;font-size:12px}button{background:#087e8b;color:white;padding:11px;border:0;border-radius:0;font-weight:700}.error{color:#b42318}.success{color:#087e8b}',
+    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;font:inherit}.hint{color:#64777e;font-size:12px}.field-error,.error{color:#b42318}.success{color:#087e8b}.buttons{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:white;color:#18313a;border:1px solid #d6e1e4;padding:11px;font:inherit;cursor:pointer}.secondary:disabled{opacity:.55;cursor:not-allowed}button[mat-flat-button]{background:#087e8b;color:white;padding:11px;border:0;font-weight:700}',
   ],
 })
 export class RegisterUserComponent {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private notifications = inject(NotificationService);
   readonly busy = signal(false);
   readonly done = signal(false);
   readonly error = signal('');
+  readonly loading = signal(false);
+  readonly changePassword = signal(false);
+  readonly id = this.route.snapshot.paramMap.get('id');
+  readonly editing = !!this.id;
+  ownAccount = false;
   readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(254)]],
-    password: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(100)]],
+    password: ['', [Validators.minLength(10), Validators.maxLength(100)]],
+    confirmPassword: ['', [Validators.minLength(10), Validators.maxLength(100)]],
     role: ['OPERATOR' as 'OPERATOR' | 'SUPERVISOR', Validators.required],
   });
+  constructor() {
+    if (!this.editing) {
+      this.form.controls.password.addValidators(Validators.required);
+      this.form.controls.confirmPassword.addValidators(Validators.required);
+      this.form.controls.password.updateValueAndValidity();
+      this.form.controls.confirmPassword.updateValueAndValidity();
+    } else {
+      this.loading.set(true);
+      this.auth.listUsers().subscribe({
+        next: (rows) => {
+          const u = rows.find((x) => x.id === this.id);
+          if (!u) {
+            this.error.set('Usuario no encontrado');
+            this.loading.set(false);
+            return;
+          }
+          this.ownAccount = this.auth.user()?.id === u.id;
+          this.form.patchValue({ fullName: u.fullName, email: u.email, role: u.role });
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('No se pudo cargar el usuario.');
+          this.loading.set(false);
+        },
+      });
+    }
+  }
+  passwordsMismatch() {
+    const { password, confirmPassword } = this.form.getRawValue();
+    return password !== confirmPassword;
+  }
+  beginPasswordChange() {
+    this.error.set('');
+    this.changePassword.set(true);
+  }
+  cancelPasswordChange() {
+    this.form.controls.password.reset('');
+    this.form.controls.confirmPassword.reset('');
+    this.changePassword.set(false);
+  }
+  goBack() {
+    this.router.navigate(['/users']);
+  }
   submit() {
-    if (this.form.invalid) {
+    const v = this.form.getRawValue();
+    const hasPassword = !!v.password || !!v.confirmPassword;
+    if (this.form.invalid || this.passwordsMismatch() || (!this.editing && !hasPassword)) {
       this.form.markAllAsTouched();
-      this.error.set('Revisa los mensajes bajo cada campo.');
+      this.error.set('Revisa los datos y confirma la contraseña.');
       return;
     }
+    if (
+      this.editing &&
+      v.password &&
+      !window.confirm('¿Confirmas cambiar la contraseña de ' + v.fullName + '?')
+    )
+      return;
     this.busy.set(true);
-    this.error.set('');
     this.done.set(false);
-    this.auth.register(this.form.getRawValue()).subscribe({
-      next: () => {
-        this.done.set(true);
-        this.form.reset({ fullName: '', email: '', password: '', role: 'OPERATOR' });
-        this.busy.set(false);
-      },
-      error: (e) => {
-        const message = e.error?.message ?? 'No se pudo registrar';
-        this.error.set(message);
-        this.notifications.showError(message);
-        this.busy.set(false);
-      },
-    });
+    this.error.set('');
+    if (this.editing) {
+      const payload: {
+        fullName: string;
+        email: string;
+        role?: 'OPERATOR' | 'SUPERVISOR';
+        password?: string;
+      } = { fullName: v.fullName, email: v.email };
+      if (!this.ownAccount) payload.role = v.role;
+      if (v.password) payload.password = v.password;
+      this.auth.updateUser(this.id!, payload).subscribe({
+        next: () => {
+          this.done.set(true);
+          this.cancelPasswordChange();
+          this.busy.set(false);
+        },
+        error: (e) => this.fail(e),
+      });
+    } else
+      this.auth
+        .register({ fullName: v.fullName, email: v.email, role: v.role, password: v.password })
+        .subscribe({
+          next: () => {
+            this.done.set(true);
+            this.form.controls.password.reset('');
+            this.form.controls.confirmPassword.reset('');
+            this.busy.set(false);
+          },
+          error: (e) => this.fail(e),
+        });
+  }
+  private fail(e: { error?: { message?: string } }) {
+    const message = e.error?.message ?? 'No se pudo guardar el usuario';
+    this.error.set(message);
+    this.notifications.showError(message);
+    this.busy.set(false);
   }
 }

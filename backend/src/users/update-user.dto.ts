@@ -28,6 +28,18 @@ export class UpdateUserDto {
   email?: string;
 
   @ApiPropertyOptional({
+    example: '••••••••••',
+    minLength: 10,
+    maxLength: 100,
+    writeOnly: true,
+  })
+  @Transform(({ value }) => (value === null ? undefined : value))
+  @IsOptional()
+  @IsString()
+  @Length(10, 100)
+  password?: string;
+
+  @ApiPropertyOptional({
     enum: UserRole,
     enumName: 'UserRole',
     example: UserRole.OPERATOR,
