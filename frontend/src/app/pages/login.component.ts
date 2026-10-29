@@ -28,16 +28,33 @@ import { NotificationService } from '../core/notification.service';
           }
         }
       </label>
-      <label
-        >Contraseña<input
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-        /><small class="hint">Obligatoria.</small>
+      <div class="password-field">
+        <label for="login-password">Contraseña</label>
+        <div class="password-control">
+          <input
+            id="login-password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="showPassword()"
+            (click)="togglePasswordVisibility()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+        <small class="hint">Obligatoria.</small>
         @if (form.controls.password.touched && form.controls.password.hasError('required')) {
           <small class="field-error">Escribe la contraseña.</small>
         }
-      </label>
+      </div>
       @if (error()) {
         <p class="error" role="alert">{{ error() }}</p>
       }
@@ -74,6 +91,51 @@ import { NotificationService } from '../core/notification.service';
         border: 1px solid #d6e1e4;
         border-radius: 0;
         font: inherit;
+      }
+      .password-field {
+        display: grid;
+        gap: 6px;
+        margin: 16px 0;
+      }
+      .password-field label {
+        margin: 0;
+      }
+      .password-control {
+        position: relative;
+        display: flex;
+        align-items: center;
+      }
+      .password-control input {
+        width: 100%;
+        padding-right: 46px;
+      }
+      .password-toggle {
+        position: absolute;
+        top: 50%;
+        right: 4px;
+        display: grid;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        place-items: center;
+        transform: translateY(-50%);
+        border: 0;
+        background: transparent;
+        color: #64777e;
+        cursor: pointer;
+      }
+      .password-toggle svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .password-toggle:focus-visible {
+        outline: 2px solid #087e8b;
+        outline-offset: 1px;
       }
       .hint {
         color: #64777e;
@@ -113,10 +175,14 @@ export class LoginComponent {
   private notifications = inject(NotificationService);
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly showPassword = signal(false);
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+  togglePasswordVisibility() {
+    this.showPassword.update((visible) => !visible);
+  }
   submit() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
