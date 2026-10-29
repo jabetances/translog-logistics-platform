@@ -34,28 +34,62 @@ import { NotificationService } from '../core/notification.service';
           </button>
         }
         @if (!editing || changePassword()) {
-          <label
-            >Contraseña<input
-              type="password"
-              formControlName="password"
-              autocomplete="new-password"
-              minlength="10"
-              maxlength="100"
-            />
+          <div class="password-field">
+            <label for="account-password">Contraseña</label>
+            <div class="password-control">
+              <input
+                id="account-password"
+                [type]="showPassword() ? 'text' : 'password'"
+                formControlName="password"
+                autocomplete="new-password"
+                minlength="10"
+                maxlength="100"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                [attr.aria-pressed]="showPassword()"
+                (click)="togglePasswordVisibility()"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
             <small class="hint">{{
               editing
                 ? 'Escribe la nueva contraseña y confírmala; debe tener 10–100 caracteres.'
                 : 'Obligatoria · 10–100 caracteres.'
-            }}</small></label
-          >
-          <label
-            >Confirmar contraseña<input
-              type="password"
-              formControlName="confirmPassword"
-              autocomplete="new-password"
-              minlength="10"
-              maxlength="100"
-            />
+            }}</small>
+          </div>
+          <div class="password-field">
+            <label for="account-confirm-password">Confirmar contraseña</label>
+            <div class="password-control">
+              <input
+                id="account-confirm-password"
+                [type]="showConfirmPassword() ? 'text' : 'password'"
+                formControlName="confirmPassword"
+                autocomplete="new-password"
+                minlength="10"
+                maxlength="100"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                [attr.aria-label]="
+                  showConfirmPassword() ? 'Ocultar confirmación' : 'Mostrar confirmación'
+                "
+                [attr.aria-pressed]="showConfirmPassword()"
+                (click)="toggleConfirmPasswordVisibility()"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
             @if (
               (form.controls.password.touched ||
                 form.controls.password.dirty ||
@@ -65,7 +99,7 @@ import { NotificationService } from '../core/notification.service';
             ) {
               <small class="field-error">Las contraseñas no coinciden.</small>
             }
-          </label>
+          </div>
         }
         @if (editing && changePassword()) {
           <button type="button" class="secondary" (click)="cancelPasswordChange()">
@@ -102,7 +136,7 @@ import { NotificationService } from '../core/notification.service';
     }
   </section>`,
   styles: [
-    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;font:inherit}.hint{color:#64777e;font-size:12px}.field-error,.error{color:#b42318}.success{color:#087e8b}.buttons{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:white;color:#18313a;border:1px solid #d6e1e4;padding:11px;font:inherit;cursor:pointer}.secondary:disabled{opacity:.55;cursor:not-allowed}button[mat-flat-button]{background:#087e8b;color:white;padding:11px;border:0;font-weight:700}',
+    ':host{display:block;max-width:580px;margin:40px auto;padding:0 20px}.card{background:white;padding:30px}form{display:grid;gap:14px}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #d6e1e4;font:inherit}.hint{color:#64777e;font-size:12px}.password-field{display:grid;gap:6px}.password-control{position:relative;display:flex;align-items:center}.password-control input{width:100%;padding-right:46px}.password-toggle{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:36px;height:36px;padding:0;border:0;background:transparent;color:#64777e;cursor:pointer}.password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.password-toggle:focus-visible{outline:2px solid #087e8b;outline-offset:1px}.field-error,.error{color:#b42318}.success{color:#087e8b}.buttons{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:white;color:#18313a;border:1px solid #d6e1e4;padding:11px;font:inherit;cursor:pointer}.secondary:disabled{opacity:.55;cursor:not-allowed}button[mat-flat-button]{background:#087e8b;color:white;padding:11px;border:0;font-weight:700}',
   ],
 })
 export class RegisterUserComponent {
@@ -116,6 +150,8 @@ export class RegisterUserComponent {
   readonly error = signal('');
   readonly loading = signal(false);
   readonly changePassword = signal(false);
+  readonly showPassword = signal(false);
+  readonly showConfirmPassword = signal(false);
   readonly id = this.route.snapshot.paramMap.get('id');
   readonly editing = !!this.id;
   ownAccount = false;
@@ -157,13 +193,23 @@ export class RegisterUserComponent {
     const { password, confirmPassword } = this.form.getRawValue();
     return password !== confirmPassword;
   }
+  togglePasswordVisibility() {
+    this.showPassword.update((visible) => !visible);
+  }
+  toggleConfirmPasswordVisibility() {
+    this.showConfirmPassword.update((visible) => !visible);
+  }
   beginPasswordChange() {
     this.error.set('');
+    this.showPassword.set(false);
+    this.showConfirmPassword.set(false);
     this.changePassword.set(true);
   }
   cancelPasswordChange() {
     this.form.controls.password.reset('');
     this.form.controls.confirmPassword.reset('');
+    this.showPassword.set(false);
+    this.showConfirmPassword.set(false);
     this.changePassword.set(false);
   }
   goBack() {
@@ -211,6 +257,8 @@ export class RegisterUserComponent {
             this.done.set(true);
             this.form.controls.password.reset('');
             this.form.controls.confirmPassword.reset('');
+            this.showPassword.set(false);
+            this.showConfirmPassword.set(false);
             this.busy.set(false);
           },
           error: (e) => this.fail(e),
